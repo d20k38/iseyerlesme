@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.6 Supabase Test Düzeltildi</title>
+<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.7 Supabase Tanı Ekranı</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -83,38 +83,88 @@ function fillSupabaseSettings(){let u=document.getElementById('sbUrl'),k=documen
 function toggleKey(){let k=document.getElementById('sbKey'); if(!k)return; k.type=k.type==='password'?'text':'password';}
 async function saveSupabaseSettings(){let u=document.getElementById('sbUrl').value.trim();let k=document.getElementById('sbKey').value.trim(); if(!u||!k)return alert('SUPABASE_URL ve SUPABASE_ANON_KEY alanlarını doldurun.'); localStorage.setItem('isyeriPortalSupabaseUrl',u); localStorage.setItem('isyeriPortalSupabaseAnonKey',k); initSupabase(); fillSupabaseSettings(); await testSupabaseConnection(true); await loadAll(); alert('Supabase ayarları kaydedildi.');}
 function clearSupabaseSettings(){if(!confirm('Supabase ayarları bu cihazdan temizlensin mi?'))return; localStorage.removeItem('isyeriPortalSupabaseUrl'); localStorage.removeItem('isyeriPortalSupabaseAnonKey'); initSupabase(); fillSupabaseSettings(); setCloud(false); let el=document.getElementById('sbTestResult'); if(el)el.textContent='Ayarlar temizlendi';}
-async function testSupabaseConnection(silent=false){
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error((label||'İstek')+' zaman aşımına uğradı ('+(ms/1000)+' sn). İnternet/CDN/CORS kontrol edin.')),ms))
+  ]);
+}
+function setDiag(msg, cls='notice'){
   let el=document.getElementById('sbTestResult');
+  if(!el) return;
+  el.innerHTML = msg;
+  el.className = cls;
+}
+async function testSupabaseConnection(silent=false){
   initSupabase();
-  if(!DB){
-    setCloud(false);
-    if(el)el.textContent='Eksik veya hatalı ayar';
-    if(!silent)alert('Supabase ayarları eksik veya hatalı görünüyor. URL https://...supabase.co şeklinde, key ise anon/public key olmalıdır.');
-    return false;
-  }
+  const steps=[];
+  const add=(ok,txt,detail='')=>steps.push(`<div>${ok?'✅':'❌'} <b>${esc(txt)}</b>${detail?`<br><span class="muted">${esc(detail)}</span>`:''}</div>`);
   try{
-    // v8.5: Önce Supabase REST uç noktası test edilir. Böylece tablo/policy eksikliği bağlantı hatası gibi görünmez.
-    const base=SUPABASE_URL.replace(/\/+$/,'');
-    const rest=await fetch(base+'/rest/v1/',{method:'GET',headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
-    if(!rest.ok){let detail='';try{detail=await rest.text()}catch(_){};throw new Error('URL / ANON KEY doğrulanamadı. HTTP '+rest.status+(detail?(' - '+detail.slice(0,160)):''));}
-    setCloud(true);
-    let missing=[],denied=[];
-    const tables=['teachers','students','workplace_requests','student_applications','portal_heartbeat'];
-    for(const table of tables){
-      const r=await DB.from(table).select('*').limit(1);
-      if(r.error){
-        if((r.error.code||'')==='42P01' || /does not exist|schema cache/i.test(r.error.message||'')) missing.push(table);
-        else if((r.error.code||'')==='42501' || /permission|policy|RLS|row-level/i.test(r.error.message||'')) denied.push(table);
-      }
+    setDiag('⏳ Test ediliyor... Lütfen bekleyiniz.','notice');
+    if(!window.supabase){
+      setCloud(false);
+      add(false,'Supabase CDN yüklenemedi','Telefon/internet ağı jsdelivr CDN adresini engelliyor olabilir. Vercel üzerinde internet erişimini veya farklı ağı deneyin.');
+      setDiag(steps.join(''),'notice badbox');
+      if(!silent) alert('Supabase kütüphanesi yüklenemedi. İnternet/CDN engeli olabilir.');
+      return false;
     }
-    if(el) el.textContent=(missing.length||denied.length)?'✅ Supabase bağlı; SQL/policy kontrolü gerekli':'✅ Supabase bağlantısı başarılı';
-    if(!silent && (missing.length||denied.length)) alert('Supabase bağlantısı doğru. Ancak bazı tablolar veya izinler eksik görünüyor.\n\nEksik tablo: '+(missing.join(', ')||'-')+'\nİzin/RLS kontrolü: '+(denied.join(', ')||'-')+'\n\nYönetici panelindeki v8.6 SQL kodunu Supabase SQL Editor içinde çalıştırınız. Bu SQL tekrar çalıştırılabilir şekilde düzenlendi.');
-    await heartbeat();
+    add(true,'Supabase kütüphanesi yüklendi');
+    if(!SUPABASE_URL || !SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co')){
+      setCloud(false); add(false,'SUPABASE_URL biçimi hatalı','URL https://xxxx.supabase.co şeklinde olmalı. Başında/sonunda boşluk olmamalı.');
+      setDiag(steps.join(''),'notice badbox'); return false;
+    }
+    add(true,'SUPABASE_URL biçimi doğru');
+    if(!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.length<80){
+      setCloud(false); add(false,'SUPABASE_ANON_KEY eksik/kısa görünüyor','Project Settings > API bölümündeki anon/public key kullanılmalı.');
+      setDiag(steps.join(''),'notice badbox'); return false;
+    }
+    add(true,'SUPABASE_ANON_KEY biçimi uygun');
+    DB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const base=SUPABASE_URL.replace(/\/+$/,'');
+    let rest;
+    try{
+      rest = await withTimeout(fetch(base+'/rest/v1/',{method:'GET',headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}}),9000,'Supabase REST testi');
+    }catch(e){
+      setCloud(false); add(false,'Supabase sunucusuna ulaşılamadı',e.message||String(e));
+      setDiag(steps.join(''),'notice badbox'); if(!silent) alert('Supabase sunucusuna ulaşılamadı: '+(e.message||e)); return false;
+    }
+    if(!rest.ok){
+      let detail=''; try{detail=await rest.text()}catch(_){}
+      setCloud(false); add(false,'URL / ANON KEY doğrulanamadı','HTTP '+rest.status+' '+detail.slice(0,180));
+      setDiag(steps.join(''),'notice badbox'); if(!silent) alert('URL veya ANON KEY hatalı görünüyor. HTTP '+rest.status); return false;
+    }
+    add(true,'URL ve ANON KEY doğrulandı');
+    setCloud(true);
+    const tables=['teachers','students','workplace_requests','student_applications','portal_heartbeat'];
+    let missing=[],denied=[],other=[];
+    for(const table of tables){
+      try{
+        const r = await withTimeout(DB.from(table).select('*').limit(1),7000,table+' tablo testi');
+        if(r.error){
+          const msg=r.error.message||''; const code=r.error.code||'';
+          if(code==='42P01' || /does not exist|schema cache/i.test(msg)) missing.push(table);
+          else if(code==='42501' || /permission|policy|RLS|row-level/i.test(msg)) denied.push(table);
+          else other.push(table+': '+msg);
+        }else add(true,table+' tablosu erişilebilir');
+      }catch(e){ other.push(table+': '+(e.message||e)); }
+    }
+    if(missing.length) add(false,'Eksik tablolar',missing.join(', '));
+    if(denied.length) add(false,'Policy/RLS izin sorunu',denied.join(', '));
+    if(other.length) add(false,'Diğer tablo test uyarıları',other.join(' | '));
+    if(!missing.length && !denied.length && !other.length){
+      add(true,'Supabase bağlantısı tam başarılı');
+      setDiag(steps.join(''),'notice okbox');
+      await heartbeat();
+      return true;
+    }
+    setDiag(steps.join(''),'notice');
+    if(!silent) alert('Supabase URL/key doğru; ancak SQL tablo/policy tarafında eksik var. Yönetici panelindeki SQL kodunu çalıştırın.');
     return true;
   }catch(e){
     setCloud(false);
-    if(el)el.textContent='❌ '+(e.message||'Bağlantı hatası');
-    if(!silent)alert('Bağlantı testi başarısız: '+(e.message||e)+'\n\nBilgiler doğruysa URL sonunda boşluk olmadığını, anon/public key kullandığınızı ve Vercel/telefon internet erişimini kontrol ediniz.');
+    add(false,'Beklenmeyen test hatası',e.message||String(e));
+    setDiag(steps.join(''),'notice badbox');
+    if(!silent) alert('Bağlantı testi hatası: '+(e.message||e));
     return false;
   }
 }
