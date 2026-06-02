@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.2 Keep Alive</title>
+<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.3 Giriş Sabit</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -32,7 +32,7 @@
 
 <div id="loginPage" class="login card noPrint">
   <h2>Portal Girişi</h2><p class="muted">Öğretmen adınızı seçip şifrenizi giriniz. Öğrenci işyeri talepleri altta şifresiz görünür.</p>
-  <div class="grid"><div class="col-12"><label>Öğretmen / Yönetici Seçiniz</label><select id="loginUser"></select></div><div class="col-12"><label>Şifre</label><input id="loginPass" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Şifrenizi giriniz"></div><div class="col-12"><button class="btnWide" onclick="login()">Portala Giriş Yap</button></div></div>
+  <div class="grid"><div class="col-12"><label>Öğretmen / Yönetici Seçiniz</label><select id="loginUser"><option value="admin">Yönetici</option></select></div><div class="col-12"><label>Şifre</label><input id="loginPass" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Şifrenizi giriniz"></div><div class="col-12"><button class="btnWide" onclick="login()">Portala Giriş Yap</button></div></div>
 </div>
 
 <div class="wrap publicPanel noPrint" id="publicLanding">
@@ -104,8 +104,41 @@ function downloadCronReadme(){let txt=`VERCEL CRON KURULUM NOTU\n\n1) Bu HTML do
 const VERCEL_KEEPALIVE_JS=`export default async function handler(req, res) {\n  const url = process.env.SUPABASE_URL;\n  const key = process.env.SUPABASE_ANON_KEY;\n  const secret = process.env.CRON_SECRET;\n  if (secret && req.headers.authorization !== 'Bearer ' + secret) {\n    return res.status(401).json({ ok:false, error:'unauthorized' });\n  }\n  if (!url || !key) return res.status(500).json({ ok:false, error:'missing env' });\n  const r = await fetch(url + '/rest/v1/portal_heartbeat', {\n    method:'POST',\n    headers:{\n      apikey:key,\n      Authorization:'Bearer ' + key,\n      'Content-Type':'application/json',\n      Prefer:'resolution=merge-duplicates,return=representation'\n    },\n    body: JSON.stringify({ id:'vercel_cron_keepalive', note:'Vercel Cron otomatik heartbeat', updated_at:new Date().toISOString() })\n  });\n  const body = await r.text();\n  res.status(r.ok ? 200 : 500).send(body);\n}`;
 const VERCEL_JSON=`{\n  "crons": [\n    { "path": "/api/keepalive", "schedule": "0 6 * * *" }\n  ]\n}`;
 function init(){ensureAdmin();renderChecks('featureChecks',FEATURES);renderChecks('studentFeatureChecks',FEATURES);renderChecks('dayChecks',DAYS);document.getElementById('sqlCode').textContent=SQL;fillSupabaseSettings();refreshKeepAliveStatus();loadAll();setInterval(heartbeat,1000*60*30)}
-function renderLogin(){ensureAdmin();let sel=document.getElementById('loginUser');let teachers=data.teachers.filter(t=>t.role!=='admin');let admins=data.teachers.filter(t=>t.role==='admin');let teacherOptions=teachers.map((t,i)=>`<option value="${i}">${esc(t.name)}</option>`).join('');let adminOptions=admins.map((t,i)=>`<option value="admin_${i}">${esc(t.name)}</option>`).join('');sel.innerHTML=(teacherOptions||'<option disabled>Öğretmen listesi henüz yüklenmedi</option>')+adminOptions}
-function login(){ensureAdmin();let v=document.getElementById('loginUser').value;if(!v||v==='')return alert('Lütfen listeden Yönetici veya öğretmen seçiniz.');let list=v.startsWith('admin_')?data.teachers.filter(t=>t.role==='admin'):data.teachers.filter(t=>t.role!=='admin');let u=list[parseInt(v.replace('admin_',''))];if(!u||document.getElementById('loginPass').value!==u.pass)return alert('Şifre hatalı.');currentUser=u;document.getElementById('loginPage').classList.add('hidden');document.getElementById('publicLanding').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('welcome').textContent=u.name+' olarak giriş yaptınız';document.getElementById('userBadge').innerHTML=`<span class="pill">${esc(u.role==='admin'?'Yönetici':'Koordinatör')}</span>`;document.querySelectorAll('.adminOnly').forEach(x=>x.style.display=u.role==='admin'?'':'none');document.getElementById('rTeacher').value=u.name;renderAll()}
+function getSafeUsers(){
+  ensureAdmin();
+  const teachers=(data.teachers||[]).filter(t=>t && t.name && t.role!=='admin');
+  let admin=(data.teachers||[]).find(t=>t && (t.role==='admin' || String(t.name).toLowerCase().trim()==='yönetici' || String(t.name).toLowerCase().trim()==='yonetici'));
+  if(!admin) admin={id:'admin',name:'Yönetici',pass:'18309',role:'admin'};
+  admin.name='Yönetici'; admin.role='admin'; admin.pass=admin.pass||admin.password||'18309'; admin.id=admin.id||'admin';
+  return {teachers, admin};
+}
+function renderLogin(){
+  const sel=document.getElementById('loginUser');
+  if(!sel) return;
+  const old=sel.value;
+  const {teachers}=getSafeUsers();
+  let html=teachers.map((t,i)=>`<option value="teacher_${i}">${esc(t.name)}</option>`).join('');
+  html += `<option value="admin">Yönetici</option>`;
+  sel.innerHTML=html;
+  if(old && [...sel.options].some(o=>o.value===old)) sel.value=old;
+  else sel.value = teachers.length ? 'teacher_0' : 'admin';
+}
+function login(){
+  const {teachers, admin}=getSafeUsers();
+  const v=document.getElementById('loginUser')?.value || 'admin';
+  let u = v==='admin' ? admin : teachers[parseInt(String(v).replace('teacher_',''))];
+  if(!u) u=admin;
+  if(document.getElementById('loginPass').value !== String(u.pass||u.password||'')) return alert('Şifre hatalı.');
+  currentUser=u;
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('publicLanding').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('welcome').textContent=u.name+' olarak giriş yaptınız';
+  document.getElementById('userBadge').innerHTML=`<span class="pill">${esc(u.role==='admin'?'Yönetici':'Koordinatör')}</span>`;
+  document.querySelectorAll('.adminOnly').forEach(x=>x.style.display=u.role==='admin'?'':'none');
+  document.getElementById('rTeacher').value=u.name;
+  renderAll();
+}
 function logout(){currentUser=null;document.getElementById('app').classList.add('hidden');document.getElementById('loginPage').classList.remove('hidden');document.getElementById('publicLanding').classList.remove('hidden');document.getElementById('loginPass').value='';renderPublic()}
 function showTab(id){document.querySelectorAll('.tabPage').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));renderAll()}
 function renderAll(){renderLogin();renderPublic();renderDashboard();renderStudents();renderMatchSelectors();renderApplications();renderReports();let dl=document.getElementById('studentNames');if(dl)dl.innerHTML=data.students.map(s=>`<option value="${esc(s.name+' / '+s.class)}">`).join('')}
