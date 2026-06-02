@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.8 Öğrenci Düzenleme ve Supabase Test Düzeltme</title>
+<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V9 Bulut Bağlantı Düzeltildi</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -70,7 +70,7 @@ function initSupabase(){
   return DB;
 }
 initSupabase();
-const FEATURES=['Logo kullanabilir','Zirve kullanabilir','DataSoft kullanabilir','Excel iyi','Devamsızlık yok','Aktif / girişken','İletişimi güçlü','Diksiyonu düzgün','Sorumluluk sahibi','Ulaşım sorunu yok','Dosyalama düzeni iyi','E-fatura/e-arşiv bilgisi','Ofis programları iyi','Takım çalışmasına uygun'];
+const FEATURES=['Logo kullanabilir','Zirve kullanabilir','DataSoft kullanabilir','LUCA kullanır','Excel iyi','Klavyesi iyi','Devamsızlık yok','Aktif / girişken','İletişimi güçlü','Diksiyonu düzgün','Sorumluluk sahibi','Ulaşım sorunu yok','Dosyalama düzeni iyi','E-fatura/e-arşiv bilgisi','Ofis programları iyi','Takım çalışmasına uygun'];
 const DAYS=['Pazartesi, Salı, Çarşamba','Çarşamba, Perşembe, Cuma','Pazartesi, Salı','Perşembe, Cuma','Haftanın 3 günü / işletme ile belirlenecek'];
 let data={teachers:[{name:'Ahmet Yılmaz',pass:'1234',role:'teacher'},{name:'Ayşe Kaya',pass:'1234',role:'teacher'},{name:'Yönetici',pass:'18309',role:'admin'}],students:[],requests:[],applications:[],heartbeats:[]};let currentUser=null;
 function uid(){return crypto.randomUUID?crypto.randomUUID():'id_'+Date.now()+'_'+Math.random().toString(16).slice(2)}
@@ -105,80 +105,88 @@ async function testSupabaseConnection(silent=false){
   const started=Date.now();
   const steps=[];
   const add=(ok,txt,detail='')=>steps.push(`<div>${ok?'✅':'❌'} <b>${esc(txt)}</b>${detail?`<br><span class="muted">${esc(detail)}</span>`:''}</div>`);
-  let failSafe=setTimeout(()=>{
-    setCloud(false);
-    setDiag('❌ <b>Test zaman aşımına uğradı.</b><br><span class="muted">İstek 10 saniyede sonuçlanmadı. İnternet, Vercel yayın adresi, Supabase URL/anon key veya tarayıcı ağ engelini kontrol ediniz.</span>','notice badbox');
-  },10500);
+  const show=(ok=false, extra='')=>{
+    setCloud(ok);
+    setDiag((steps.join('') || extra || (ok?'✅ Bağlantı başarılı':'❌ Bağlantı kurulamadı')), ok?'notice okbox':'notice badbox');
+    return ok;
+  };
   try{
-    setDiag('⏳ Test ediliyor... En fazla 10 saniye sürecek.','notice');
+    setDiag('🔎 <b>Bağlantı kontrol ediliyor...</b><br><span class="muted">Bu test tabloya bağlı kalmadan önce URL/Key doğrular. En geç 8 saniyede sonuç verir.</span>','notice');
     const url=(SUPABASE_URL||'').trim().replace(/\/+$/,'');
     const key=(SUPABASE_ANON_KEY||'').trim();
-    if(!window.supabase){
-      setCloud(false);
-      add(false,'Supabase kütüphanesi yüklenemedi','CDN engeli olabilir. Vercel üzerinden deneyin veya internet ağını değiştirin.');
-      setDiag(steps.join(''),'notice badbox');
-      return false;
-    }
-    add(true,'Supabase kütüphanesi yüklendi');
+
     if(!url || !url.startsWith('https://') || !url.includes('.supabase.co')){
-      setCloud(false); add(false,'SUPABASE_URL biçimi hatalı','URL https://xxxx.supabase.co şeklinde olmalı.');
-      setDiag(steps.join(''),'notice badbox'); return false;
+      add(false,'SUPABASE_URL biçimi hatalı','Örnek: https://xxxx.supabase.co');
+      return show(false);
     }
     add(true,'SUPABASE_URL biçimi doğru');
-    if(!key || key.length<80){
-      setCloud(false); add(false,'SUPABASE_ANON_KEY eksik/kısa görünüyor','Supabase Project Settings > API > anon/public key kullanılmalı.');
-      setDiag(steps.join(''),'notice badbox'); return false;
+
+    // Yeni Supabase publishable key bazı projelerde kısa olabilir. Bu yüzden uzunlukla eleme yapılmaz.
+    if(!key || key.length<20){
+      add(false,'SUPABASE_ANON_KEY boş veya çok kısa','Supabase Project Settings > API bölümündeki anon/public veya publishable key girilmeli.');
+      return show(false);
     }
-    add(true,'SUPABASE_ANON_KEY biçimi uygun');
-    let resp;
+    add(true,'SUPABASE_ANON_KEY girilmiş');
+
+    const headers={apikey:key,Authorization:'Bearer '+key,'Accept':'application/json'};
+
+    // 1) Tablo bağımsız temel doğrulama: auth settings endpointi tablo/policy gerektirmez.
+    let authResp, authText='';
     try{
-      resp=await fetchWithAbort(url+'/rest/v1/teachers?select=id&limit=1',{
-        headers:{apikey:key,Authorization:'Bearer '+key,'Accept':'application/json'}
-      },7000);
+      authResp=await fetchWithAbort(url+'/auth/v1/settings',{headers},8000);
+      authText=await withTimeout(authResp.text(),2000,'Auth yanıt okuma').catch(()=> '');
     }catch(e){
-      setCloud(false);
-      add(false,'Supabase REST isteği sonuç vermedi',e.name==='AbortError'?'7 saniye zaman aşımı. URL/key doğruysa ağ veya CORS/CDN engeli olabilir.':(e.message||String(e)));
-      setDiag(steps.join(''),'notice badbox'); return false;
+      add(false,'Supabase sunucusuna ulaşılamadı', e.name==='AbortError'?'8 saniye içinde yanıt alınamadı. Vercel üzerinden deneyin, internet/ağ engelini kontrol edin.':(e.message||String(e)));
+      return show(false);
     }
-    const body=await resp.text().catch(()=>'');
-    if(resp.status===401 || resp.status===403){
-      setCloud(false); add(false,'URL / ANON KEY reddedildi','HTTP '+resp.status+' - anon key veya RLS/policy izinlerini kontrol edin.');
-      setDiag(steps.join(''),'notice badbox'); return false;
+
+    if(authResp.status===401 || authResp.status===403){
+      add(false,'URL / ANON KEY reddedildi','HTTP '+authResp.status+'. Key yanlış, farklı projeye ait veya kopyalama eksik olabilir.');
+      return show(false);
     }
-    if(resp.status===404 || /does not exist|Could not find|schema cache/i.test(body)){
-      DB=supabase.createClient(url,key); setCloud(true);
-      add(true,'URL ve ANON KEY doğru');
-      add(false,'Tablolar eksik görünüyor','Yönetici panelindeki Supabase SQL kurulum kodunu çalıştırın.');
-      setDiag(steps.join(''),'notice'); return true;
+    if(!authResp.ok){
+      add(false,'Supabase temel test uyarısı','HTTP '+authResp.status+' '+authText.slice(0,180));
+      return show(false);
     }
-    if(!resp.ok){
-      setCloud(false); add(false,'Supabase yanıtı başarısız','HTTP '+resp.status+' '+body.slice(0,200));
-      setDiag(steps.join(''),'notice badbox'); return false;
+    add(true,'URL ve ANON KEY doğrulandı','Tablolardan bağımsız temel bağlantı başarılı.');
+
+    if(window.supabase){
+      try{ DB=window.supabase.createClient(url,key); add(true,'Supabase JS istemcisi hazır'); }
+      catch(e){ DB=null; add(false,'Supabase JS istemcisi başlatılamadı',e.message||String(e)); }
+    }else{
+      DB=null;
+      add(false,'Supabase JS CDN yüklenemedi','Temel REST bağlantısı başarılı ama kayıt/güncelleme için CDN gerekli. Vercel üzerinden veya farklı ağda deneyin.');
+      return show(false);
     }
-    DB=supabase.createClient(url,key); setCloud(true);
-    add(true,'URL / ANON KEY ve teachers tablosu erişilebilir');
-    const tables=['students','workplace_requests','student_applications','portal_heartbeat'];
+
+    // 2) Tablolar ayrı kontrol edilir. Eksik tablo bulutu pasif yapmaz; kurulum uyarısı verir.
+    let tablesOk=true;
+    const tables=['teachers','students','workplace_requests','student_applications','portal_heartbeat'];
     for(const table of tables){
       try{
-        const r=await fetchWithAbort(url+`/rest/v1/${table}?select=id&limit=1`,{headers:{apikey:key,Authorization:'Bearer '+key,'Accept':'application/json'}},5000);
-        const txt=await r.text().catch(()=>'');
-        if(r.ok) add(true,table+' tablosu erişilebilir');
-        else if(r.status===404 || /does not exist|Could not find|schema cache/i.test(txt)) add(false,table+' tablosu eksik','SQL kurulum kodunu çalıştırın.');
-        else if(r.status===401 || r.status===403) add(false,table+' izin/policy sorunu','HTTP '+r.status);
-        else add(false,table+' tablo uyarısı','HTTP '+r.status+' '+txt.slice(0,120));
-      }catch(e){add(false,table+' tablo testi zaman aşımı',e.name==='AbortError'?'5 saniye içinde yanıt alınamadı.':(e.message||String(e)));}
+        const r=await fetchWithAbort(url+`/rest/v1/${table}?select=id&limit=1`,{headers},3500);
+        const txt=await withTimeout(r.text(),1500,'Tablo yanıt okuma').catch(()=> '');
+        if(r.ok){ add(true,table+' tablosu erişilebilir'); }
+        else if(r.status===404 || /does not exist|Could not find|schema cache/i.test(txt)){
+          tablesOk=false; add(false,table+' tablosu eksik','Yönetici panelindeki Supabase SQL kurulum kodunu çalıştırın.');
+        }else if(r.status===401 || r.status===403){
+          tablesOk=false; add(false,table+' policy/izin sorunu','HTTP '+r.status+'. SQL policy bölümünü tekrar çalıştırın.');
+        }else{
+          tablesOk=false; add(false,table+' tablo uyarısı','HTTP '+r.status+' '+txt.slice(0,140));
+        }
+      }catch(e){
+        tablesOk=false; add(false,table+' tablo testi tamamlanamadı', e.name==='AbortError'?'3,5 saniyede yanıt alınamadı.':(e.message||String(e)));
+      }
     }
-    add(true,'Test tamamlandı',Math.round((Date.now()-started)/1000)+' sn');
-    setDiag(steps.join(''),'notice okbox');
-    heartbeat();
+
+    add(true,'Bağlantı testi bitti',Math.round((Date.now()-started)/1000)+' sn');
+    setCloud(true);
+    setDiag(steps.join('') + (!tablesOk?'<div class="warn"><b>Not:</b> URL/Key doğru. Eksik tablo/policy varsa SQL kurulum kodunu yönetici panelinden çalıştırın.</div>':''),'notice okbox');
+    heartbeat().catch(()=>{});
     return true;
   }catch(e){
-    setCloud(false);
     add(false,'Beklenmeyen test hatası',e.message||String(e));
-    setDiag(steps.join(''),'notice badbox');
-    return false;
-  }finally{
-    clearTimeout(failSafe);
+    return show(false);
   }
 }
 
@@ -303,7 +311,7 @@ let studentSort={key:'name',dir:1};
 function yes(v){return ['evet','e','1','true','var','✓','x','aktif'].includes(String(v||'').trim().toLowerCase())}
 function val(r,keys){for(const k of keys){if(r[k]!==undefined && String(r[k]).trim()!=='')return String(r[k]).trim()}return ''}
 function normalizeTeacherRows(rows){let list=rows.map(r=>({id:uid(),name:val(r,['Ad Soyad','ad soyad','Öğretmen','Ogretmen','Öğretmen Adı','Ogretmen Adi']),pass:val(r,['Şifre','Sifre','Parola','Password'])||String(1000+(Math.floor(Math.random()*8999))),role:'teacher',active:val(r,['Aktif'])||'Evet'})).filter(x=>x.name);let admin=data.teachers.find(t=>t.role==='admin')||{id:'admin',name:'Yönetici',pass:'18309',role:'admin'};list=list.filter(t=>t.name.toLowerCase()!=='yönetici' && t.name.toLowerCase()!=='yonetici');list.push(admin);return list}
-function normalizeStudentRows(rows){return rows.map(r=>{let base=arr(val(r,['Özellikler','Ozellikler','Etiketler']));let map=[['Logo','Logo kullanabilir'],['Zirve','Zirve kullanabilir'],['DataSoft','DataSoft kullanabilir'],['Datasoft','DataSoft kullanabilir'],['Excel İyi','Excel iyi'],['Excel Iyi','Excel iyi'],['Excel','Excel iyi'],['Devamsızlık Yok','Devamsızlık yok'],['Devamsizlik Yok','Devamsızlık yok'],['Aktif','Aktif / girişken'],['Girişken','Aktif / girişken'],['Giriskin','Aktif / girişken']];map.forEach(([col,label])=>{if(yes(r[col]))base.push(label)});base=[...new Set(base.filter(Boolean))];let sinif=val(r,['Sınıf','Sinif','Sınıf/Şube','Sinif/Sube']);let sube=val(r,['Şube','Sube']);let cls=sinif && sube && !sinif.includes('/') ? sinif+'/'+sube : sinif;return {id:uid(),no:val(r,['Öğrenci No','Ogrenci No','No','Okul No']),name:val(r,['Öğrenci','Ogrenci','Ad Soyad','Adı Soyadı','Adi Soyadi']),class:cls,phone:val(r,['Telefon','Tel','Cep Telefonu']),address:val(r,['Adres','Bölge','Bolge']),features:base,note:val(r,['Not','Açıklama','Aciklama'])}}).filter(x=>x.name)}
+function normalizeStudentRows(rows){return rows.map(r=>{let base=arr(val(r,['Özellikler','Ozellikler','Etiketler']));let map=[['Logo','Logo kullanabilir'],['Zirve','Zirve kullanabilir'],['DataSoft','DataSoft kullanabilir'],['Datasoft','DataSoft kullanabilir'],['Excel İyi','Excel iyi'],['Excel Iyi','Excel iyi'],['Excel','Excel iyi'],['Devamsızlık Yok','Devamsızlık yok'],['Devamsizlik Yok','Devamsızlık yok'],['LUCA','LUCA kullanır'],['Luca','LUCA kullanır'],['LUCA kullanır','LUCA kullanır'],['Klavye','Klavyesi iyi'],['Klavyesi İyi','Klavyesi iyi'],['Klavyesi Iyi','Klavyesi iyi'],['Aktif','Aktif / girişken'],['Girişken','Aktif / girişken'],['Giriskin','Aktif / girişken']];map.forEach(([col,label])=>{if(yes(r[col]))base.push(label)});base=[...new Set(base.filter(Boolean))];let sinif=val(r,['Sınıf','Sinif','Sınıf/Şube','Sinif/Sube']);let sube=val(r,['Şube','Sube']);let cls=sinif && sube && !sinif.includes('/') ? sinif+'/'+sube : sinif;return {id:uid(),no:val(r,['Öğrenci No','Ogrenci No','No','Okul No']),name:val(r,['Öğrenci','Ogrenci','Ad Soyad','Adı Soyadı','Adi Soyadi']),class:cls,phone:val(r,['Telefon','Tel','Cep Telefonu']),address:val(r,['Adres','Bölge','Bolge']),features:base,note:val(r,['Not','Açıklama','Aciklama'])}}).filter(x=>x.name)}
 async function previewTeachersExcel(ev){let rows=await readExcel(ev);pendingTeachers=normalizeTeacherRows(rows);renderImportPreview('teacher',pendingTeachers);ev.target.value=''}
 async function previewStudentsExcel(ev){let rows=await readExcel(ev);pendingStudents=normalizeStudentRows(rows);renderImportPreview('student',pendingStudents);ev.target.value=''}
 function renderImportPreview(type,rows){let el=document.getElementById(type==='teacher'?'teacherPreview':'studentPreview');if(!rows.length){el.innerHTML='<div class="notice">Okunacak kayıt bulunamadı.</div>';return} if(type==='teacher'){el.innerHTML=`<table><tr><th>Ad Soyad</th><th>Şifre</th><th>Rol</th></tr>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.pass)}</td><td>${esc(r.role)}</td></tr>`).join('')}</table>`}else{el.innerHTML=`<table><tr><th>Öğrenci</th><th>Sınıf</th><th>Telefon</th><th>Özellikler</th></tr>${rows.map(r=>`<tr><td>${esc(r.name)}<br><span class="tiny">${esc(r.no||'')}</span></td><td>${esc(r.class)}</td><td>${esc(r.phone)}</td><td>${renderPills(r.features)}</td></tr>`).join('')}</table>`}}
@@ -311,13 +319,13 @@ async function commitTeacherImport(){if(!pendingTeachers.length)return alert('Ö
 async function commitStudentImport(){if(!pendingStudents.length)return alert('Önce öğrenci Excel/CSV dosyası seçiniz.');for(const s of pendingStudents){let old=data.students.find(x=>(x.name||'').toLowerCase()===s.name.toLowerCase() && (x.class||'')===(s.class||''));let obj=old?Object.assign(old,{...s,id:old.id,features:[...new Set([...(old.features||[]),...(s.features||[])])] }):s;if(!old)data.students.push(obj);if(DB)await DB.from('students').upsert({id:obj.id,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note})}saveLocal();pendingStudents=[];clearImportPreview('student');renderAll();alert('Öğrenci listesi toplu kaydedildi ve eşleştirme sistemi güncellendi.')}
 function clearImportPreview(type){if(type==='teacher'){pendingTeachers=[];let e=document.getElementById('teacherPreview'); if(e)e.innerHTML=''}else{pendingStudents=[];let e=document.getElementById('studentPreview'); if(e)e.innerHTML=''}}
 function downloadTeacherTemplate(){let ws=XLSX.utils.json_to_sheet([{ 'Ad Soyad':'Ahmet Yılmaz','Şifre':'2468','Aktif':'Evet'},{'Ad Soyad':'Ayşe Kaya','Şifre':'3579','Aktif':'Evet'},{'Ad Soyad':'Mehmet Demir','Şifre':'4680','Aktif':'Evet'}]);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ogretmenler');XLSX.writeFile(wb,'ogretmen_yukleme_sablonu.xlsx')}
-function downloadStudentTemplate(){let ws=XLSX.utils.json_to_sheet([{ 'Öğrenci No':'101','Ad Soyad':'Ali Kaya','Sınıf':'11','Şube':'A','Telefon':'05xx','Adres':'Kocasinan','Logo':'Evet','Zirve':'','DataSoft':'','Excel İyi':'Evet','Devamsızlık Yok':'Evet','Aktif':'Evet','Özellikler':'','Not':''},{'Öğrenci No':'102','Ad Soyad':'Ayşe Demir','Sınıf':'11','Şube':'B','Telefon':'05xx','Adres':'Melikgazi','Logo':'','Zirve':'Evet','DataSoft':'Evet','Excel İyi':'Evet','Devamsızlık Yok':'Evet','Aktif':'','Özellikler':'','Not':''}]);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ogrenciler');XLSX.writeFile(wb,'ogrenci_yukleme_sablonu.xlsx')}
+function downloadStudentTemplate(){let ws=XLSX.utils.json_to_sheet([{ 'Öğrenci No':'101','Ad Soyad':'Ali Kaya','Sınıf':'11','Şube':'A','Telefon':'05xx','Adres':'Kocasinan','Logo':'Evet','Zirve':'','DataSoft':'','LUCA':'Evet','Excel İyi':'Evet','Klavyesi İyi':'Evet','Devamsızlık Yok':'Evet','Aktif':'Evet','Özellikler':'','Not':''},{'Öğrenci No':'102','Ad Soyad':'Ayşe Demir','Sınıf':'11','Şube':'B','Telefon':'05xx','Adres':'Melikgazi','Logo':'','Zirve':'Evet','DataSoft':'Evet','LUCA':'','Excel İyi':'Evet','Klavyesi İyi':'','Devamsızlık Yok':'Evet','Aktif':'','Özellikler':'','Not':''}]);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ogrenciler');XLSX.writeFile(wb,'ogrenci_yukleme_sablonu.xlsx')}
 function readExcel(ev){return new Promise(res=>{let f=ev.target.files[0];if(!f)return res([]);let fr=new FileReader();fr.onload=e=>{let wb=XLSX.read(e.target.result,{type:'array'});res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))};fr.readAsArrayBuffer(f)})}
 function exportJSON(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});download(blob,'isyeri_portal_yedek.json')}
 function importJSON(ev){let f=ev.target.files[0];let fr=new FileReader();fr.onload=e=>{data=JSON.parse(e.target.result);saveLocal();renderAll()};fr.readAsText(f)}
 function exportCSV(key){let rows=data[key]||[];let csv=[Object.keys(rows[0]||{}).join(';'),...rows.map(r=>Object.values(r).map(v=>'"'+String(Array.isArray(v)?v.join(', '):v??'').replaceAll('"','""')+'"').join(';'))].join('\n');download(new Blob([csv],{type:'text/csv;charset=utf-8'}),key+'.csv')}
 function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
-const SQL=`-- v8.8 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
+const SQL=`-- v8.9 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
 -- Bu kodu SQL Editor içinde birden fazla kez çalıştırabilirsiniz.
 
 create table if not exists teachers (
