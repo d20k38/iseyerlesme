@@ -396,7 +396,7 @@ function exportJSON(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'app
 function importJSON(ev){let f=ev.target.files[0];if(!f)return;let fr=new FileReader();fr.onload=e=>{try{let obj=JSON.parse(e.target.result); if(!confirm('Yedek geri yüklensin mi? Mevcut yerel veriler değişecektir.'))return; data={...data,...obj}; ensureAdmin(); data.teachers=dedupeTeachers(data.teachers||[]); data.students=dedupeStudents(data.students||[]); data.placements=data.placements||[]; saveLocal(); renderAll(); alert('Yedek geri yüklendi.');}catch(err){alert('Yedek okunamadı: '+err.message)}};fr.readAsText(f); ev.target.value='';}
 function exportCSV(key){let rows=data[key]||[];let csv=[Object.keys(rows[0]||{}).join(';'),...rows.map(r=>Object.values(r).map(v=>'"'+String(Array.isArray(v)?v.join(', '):v??'').replaceAll('"','""')+'"').join(';'))].join('\n');download(new Blob([csv],{type:'text/csv;charset=utf-8'}),key+'.csv')}
 function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
-const SQL=`-- v9.7 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
+const SQL=`-- v9.8 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
 -- Bu kodu SQL Editor içinde birden fazla kez çalıştırabilirsiniz.
 
 create table if not exists teachers (
@@ -411,7 +411,7 @@ create table if not exists teachers (
 alter table teachers add column if not exists teacher_key text;
 update teachers set teacher_key = coalesce(nullif(teacher_key,''), case when role='admin' or lower(trim(name)) in ('yönetici','yonetici') then 'admin' else lower(trim(name)) end);
 
--- v9.7 düzeltmesi: Tekil indeks kurulmadan önce aynı öğretmen kayıtları temizlenir.
+-- v9.8 düzeltmesi: Tekil indeks kurulmadan önce aynı öğretmen kayıtları temizlenir.
 -- Aynı teacher_key'e sahip kayıtlarda en güncel/ilk kayıt korunur, diğerleri silinir.
 with duplicate_teachers as (
   select ctid,
@@ -444,6 +444,23 @@ create table if not exists students (
 alter table students add column if not exists student_no text;
 alter table students add column if not exists student_key text;
 update students set student_key = coalesce(nullif(student_key,''), case when coalesce(student_no,'')<>'' then 'no:'||student_no else 'nc:'||lower(trim(name))||'|'||lower(trim(coalesce(class_name,''))) end);
+
+-- v9.8 düzeltmesi: Tekil indeks kurulmadan önce aynı öğrenci kayıtları temizlenir.
+-- Aynı student_key'e sahip kayıtlarda en güncel/ilk kayıt korunur, diğerleri silinir.
+-- Kural: Öğrenci No varsa öğrenci no, yoksa Ad Soyad + Sınıf/Şube.
+with duplicate_students as (
+  select ctid,
+         row_number() over (
+           partition by student_key
+           order by created_at desc nulls last, id
+         ) as rn
+  from students
+  where student_key is not null and student_key <> ''
+)
+delete from students s
+using duplicate_students d
+where s.ctid = d.ctid and d.rn > 1;
+
 create unique index if not exists students_student_key_unique on students(student_key);
 
 create table if not exists workplace_requests (
