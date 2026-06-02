@@ -59,7 +59,7 @@
 </style>
 </head>
 <body>
-<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v10.7</small></h1><p>İşyeri talepleri, öğrenci havuzu, ayrı işletme formu, durum takibi ve WhatsApp paylaşım sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
+<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v10.8</small></h1><p>İşyeri talepleri, öğrenci havuzu, ayrı işletme formu, durum takibi ve WhatsApp paylaşım sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
 
 
 <div id="teacherGuideOverlay" class="guideOverlay noPrint" onclick="guideBackdropClose(event)">
@@ -364,7 +364,7 @@ async function upsertStudent(obj){
   if(idx>=0){obj=mergeStudent(data.students[idx],obj);data.students[idx]=obj}else data.students.push(obj);
   data.students=dedupeStudents(data.students);
   saveLocal();
-  // v10.7: Supabase'e öğrenci kaydederken id göndermiyoruz.
+  // v10.8: Supabase'e öğrenci kaydederken id göndermiyoruz.
   // Tekil kontrol student_key üzerinden yapılır. Böylece students_pkey duplicate hatası oluşmaz.
   let row={student_no:obj.no||'',student_key:obj.key,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note};
   let r=await cloudUpsert('students',row,{onConflict:'student_key'});
@@ -388,9 +388,22 @@ function requireCloudForSave(){
 }
 async function cloudUpsert(table,obj,opts){
   if(!requireCloudForSave()) return {ok:false,error:'Bulut bağlantısı aktif değil'};
+  const run = async(payload)=>{
+    const q = opts ? DB.from(table).upsert(payload,opts) : DB.from(table).upsert(payload);
+    return await q;
+  };
   try{
-    const q = opts ? DB.from(table).upsert(obj,opts) : DB.from(table).upsert(obj);
-    const {error}=await q;
+    let payload={...obj};
+    // v10.8: Eğer eski Supabase şemasında id otomatik üretilmiyorsa
+    // null id hatasını önlemek için sadece ilk ekleme gerektiğinde güvenli id verilir.
+    if((table==='students'||table==='teachers') && ('id' in payload) && !payload.id){ delete payload.id; }
+    let {error}=await run(payload);
+    const msg=(error&&error.message)||'';
+    if(error && /null value in column \"id\"|violates not-null constraint/i.test(msg)){
+      const retry={...payload,id:(crypto.randomUUID?crypto.randomUUID():'id_'+Date.now()+'_'+Math.random().toString(16).slice(2))};
+      const res2=await run(retry);
+      error=res2.error;
+    }
     if(error){cloudStatusText(false,'Supabase kayıt hatası: '+error.message); return {ok:false,error:error.message};}
     cloudStatusText(true,'Bulut kayıt başarılı: '+table); return {ok:true};
   }catch(e){cloudStatusText(false,'Supabase JavaScript hatası: '+e.message); return {ok:false,error:e.message};}
@@ -415,13 +428,13 @@ async function syncLocalToCloud(){
   const put=async(table,row,opts)=>{const r=await cloudUpsert(table,row,opts); if(r.ok) ok++; else {fail++; errors.push(table+': '+r.error)}};
   for(const t of dedupeTeachers(data.teachers||[])){
     const tk=t.role==='admin'?'admin':teacherKey(t);
-    // v10.7: Öğretmenlerde de tekil kontrol teacher_key ile yapılır.
+    // v10.8: Öğretmenlerde de tekil kontrol teacher_key ile yapılır.
     // id çakışması riskini azaltmak için id alanı gönderilmez.
     await put('teachers',{name:t.name,password:t.pass||t.password||'',role:t.role||'teacher',teacher_key:tk},{onConflict:'teacher_key'});
   }
   for(const s of dedupeStudents(data.students||[])){
     const key=studentKey(s);
-    // v10.7: Öğrencilerde id yerine student_key ile upsert yapılır.
+    // v10.8: Öğrencilerde id yerine student_key ile upsert yapılır.
     await put('students',{student_no:s.no||'',student_key:key,name:s.name,class_name:s.class||'',phone:s.phone||'',address:s.address||'',features:s.features||[],note:s.note||''},{onConflict:'student_key'});
   }
   for(const r of data.requests||[]){
@@ -617,7 +630,7 @@ const SQL=`-- v9.8 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
 -- Bu kodu SQL Editor içinde birden fazla kez çalıştırabilirsiniz.
 
 create table if not exists teachers (
-  id text primary key,
+  id text primary key default gen_random_uuid()::text,
   name text not null,
   password text not null,
   role text not null default 'teacher',
@@ -625,6 +638,9 @@ create table if not exists teachers (
   created_at timestamptz default now()
 );
 
+-- v10.8: Eski kurulmuş tabloda öğretmen id alanı otomatik üretmiyorsa düzeltir.
+alter table teachers alter column id set default gen_random_uuid()::text;
+update teachers set id = gen_random_uuid()::text where id is null;
 alter table teachers add column if not exists teacher_key text;
 update teachers set teacher_key = coalesce(nullif(teacher_key,''), case when role='admin' or lower(trim(name)) in ('yönetici','yonetici') then 'admin' else lower(trim(name)) end);
 
@@ -646,7 +662,7 @@ where t.ctid = d.ctid and d.rn > 1;
 create unique index if not exists teachers_teacher_key_unique on teachers(teacher_key);
 
 create table if not exists students (
-  id text primary key,
+  id text primary key default gen_random_uuid()::text,
   student_no text,
   student_key text unique,
   name text not null,
@@ -658,6 +674,10 @@ create table if not exists students (
   created_at timestamptz default now()
 );
 
+-- v10.8: Eski kurulmuş tabloda id alanı otomatik üretmiyorsa düzeltir.
+-- Böylece portal id göndermese bile Supabase kendisi benzersiz id üretir.
+alter table students alter column id set default gen_random_uuid()::text;
+update students set id = gen_random_uuid()::text where id is null;
 alter table students add column if not exists student_no text;
 alter table students add column if not exists student_key text;
 update students set student_key = coalesce(nullif(student_key,''), case when coalesce(student_no,'')<>'' then 'no:'||student_no else 'nc:'||lower(trim(name))||'|'||lower(trim(coalesce(class_name,''))) end);
