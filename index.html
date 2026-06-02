@@ -396,7 +396,7 @@ function exportJSON(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'app
 function importJSON(ev){let f=ev.target.files[0];if(!f)return;let fr=new FileReader();fr.onload=e=>{try{let obj=JSON.parse(e.target.result); if(!confirm('Yedek geri yüklensin mi? Mevcut yerel veriler değişecektir.'))return; data={...data,...obj}; ensureAdmin(); data.teachers=dedupeTeachers(data.teachers||[]); data.students=dedupeStudents(data.students||[]); data.placements=data.placements||[]; saveLocal(); renderAll(); alert('Yedek geri yüklendi.');}catch(err){alert('Yedek okunamadı: '+err.message)}};fr.readAsText(f); ev.target.value='';}
 function exportCSV(key){let rows=data[key]||[];let csv=[Object.keys(rows[0]||{}).join(';'),...rows.map(r=>Object.values(r).map(v=>'"'+String(Array.isArray(v)?v.join(', '):v??'').replaceAll('"','""')+'"').join(';'))].join('\n');download(new Blob([csv],{type:'text/csv;charset=utf-8'}),key+'.csv')}
 function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
-const SQL=`-- v9.6 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
+const SQL=`-- v9.7 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
 -- Bu kodu SQL Editor içinde birden fazla kez çalıştırabilirsiniz.
 
 create table if not exists teachers (
@@ -410,6 +410,22 @@ create table if not exists teachers (
 
 alter table teachers add column if not exists teacher_key text;
 update teachers set teacher_key = coalesce(nullif(teacher_key,''), case when role='admin' or lower(trim(name)) in ('yönetici','yonetici') then 'admin' else lower(trim(name)) end);
+
+-- v9.7 düzeltmesi: Tekil indeks kurulmadan önce aynı öğretmen kayıtları temizlenir.
+-- Aynı teacher_key'e sahip kayıtlarda en güncel/ilk kayıt korunur, diğerleri silinir.
+with duplicate_teachers as (
+  select ctid,
+         row_number() over (
+           partition by teacher_key
+           order by case when role='admin' then 0 else 1 end, created_at desc nulls last, id
+         ) as rn
+  from teachers
+  where teacher_key is not null and teacher_key <> ''
+)
+delete from teachers t
+using duplicate_teachers d
+where t.ctid = d.ctid and d.rn > 1;
+
 create unique index if not exists teachers_teacher_key_unique on teachers(teacher_key);
 
 create table if not exists students (
