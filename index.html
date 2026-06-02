@@ -59,7 +59,7 @@
 </style>
 </head>
 <body>
-<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v10.6</small></h1><p>İşyeri talepleri, öğrenci havuzu, ayrı işletme formu, durum takibi ve WhatsApp paylaşım sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
+<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v10.7</small></h1><p>İşyeri talepleri, öğrenci havuzu, ayrı işletme formu, durum takibi ve WhatsApp paylaşım sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
 
 
 <div id="teacherGuideOverlay" class="guideOverlay noPrint" onclick="guideBackdropClose(event)">
@@ -356,7 +356,20 @@ function teacherKey(t){return normText(t?.name).replace(/ı/g,'i')}
 function mergeTeacher(old,t){return {...old,...t,id:old?.id||t.id||uid(),name:(t.name||old?.name||'').trim(),pass:t.pass||old?.pass||'1234',role:t.role||old?.role||'teacher',teacher_key:teacherKey(t.name?t:old)}}
 function dedupeTeachers(list){let map=new Map();(list||[]).filter(t=>t&&t.name).forEach(t=>{let isAdmin=t.role==='admin'||['yönetici','yonetici'].includes(normText(t.name));let k=isAdmin?'admin':teacherKey(t);let clean={...t,id:t.id||uid(),role:isAdmin?'admin':(t.role||'teacher'),pass:t.pass||t.password||'1234',teacher_key:k};if(map.has(k))map.set(k,mergeTeacher(map.get(k),clean));else map.set(k,clean);});if(!map.has('admin'))map.set('admin',{id:'admin',name:'Yönetici',pass:'18309',role:'admin',teacher_key:'admin'});return [...map.values()]}
 async function findStudentInCloud(s){if(!DB)return null;let k=studentKey(s);try{let q=await DB.from('students').select('*').eq('student_key',k).limit(1);if(!q.error&&q.data&&q.data[0]){let x=q.data[0];return {id:x.id,no:x.student_no||'',key:x.student_key||'',name:x.name,class:x.class_name||'',phone:x.phone||'',address:x.address||'',features:arr(x.features),note:x.note||''};}}catch(e){}return null}
-async function upsertStudent(obj){obj.key=studentKey(obj);let cloudOld=await findStudentInCloud(obj);if(cloudOld)obj=mergeStudent(cloudOld,obj);let idx=data.students.findIndex(x=>studentKey(x)===obj.key || x.id===obj.id);if(idx>=0){obj=mergeStudent(data.students[idx],obj);data.students[idx]=obj}else data.students.push(obj);data.students=dedupeStudents(data.students);saveLocal();let row={id:obj.id,student_no:obj.no||'',student_key:obj.key,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note};let r=await cloudUpsert('students',row,{onConflict:'student_key'});if(!r.ok)alert('Öğrenci buluta kaydedilemedi: '+r.error+'\nKayıt yerelde taslak olarak tutuldu.')}
+async function upsertStudent(obj){
+  obj.key=studentKey(obj);
+  let cloudOld=await findStudentInCloud(obj);
+  if(cloudOld)obj=mergeStudent(cloudOld,obj);
+  let idx=data.students.findIndex(x=>studentKey(x)===obj.key || (obj.id&&x.id===obj.id));
+  if(idx>=0){obj=mergeStudent(data.students[idx],obj);data.students[idx]=obj}else data.students.push(obj);
+  data.students=dedupeStudents(data.students);
+  saveLocal();
+  // v10.7: Supabase'e öğrenci kaydederken id göndermiyoruz.
+  // Tekil kontrol student_key üzerinden yapılır. Böylece students_pkey duplicate hatası oluşmaz.
+  let row={student_no:obj.no||'',student_key:obj.key,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note};
+  let r=await cloudUpsert('students',row,{onConflict:'student_key'});
+  if(!r.ok)alert('Öğrenci buluta kaydedilemedi: '+r.error+'\nKayıt yerelde taslak olarak tutuldu.');
+}
 
 function cloudStatusText(ok,msg){
   const el=document.getElementById('cloudStatus');
@@ -401,11 +414,15 @@ async function syncLocalToCloud(){
   let ok=0, fail=0, errors=[];
   const put=async(table,row,opts)=>{const r=await cloudUpsert(table,row,opts); if(r.ok) ok++; else {fail++; errors.push(table+': '+r.error)}};
   for(const t of dedupeTeachers(data.teachers||[])){
-    await put('teachers',{id:t.id,name:t.name,password:t.pass||t.password||'',role:t.role||'teacher',teacher_key:t.role==='admin'?'admin':teacherKey(t)},{onConflict:'teacher_key'});
+    const tk=t.role==='admin'?'admin':teacherKey(t);
+    // v10.7: Öğretmenlerde de tekil kontrol teacher_key ile yapılır.
+    // id çakışması riskini azaltmak için id alanı gönderilmez.
+    await put('teachers',{name:t.name,password:t.pass||t.password||'',role:t.role||'teacher',teacher_key:tk},{onConflict:'teacher_key'});
   }
   for(const s of dedupeStudents(data.students||[])){
     const key=studentKey(s);
-    await put('students',{id:s.id,student_no:s.no||'',student_key:key,name:s.name,class_name:s.class||'',phone:s.phone||'',address:s.address||'',features:s.features||[],note:s.note||''},{onConflict:'student_key'});
+    // v10.7: Öğrencilerde id yerine student_key ile upsert yapılır.
+    await put('students',{student_no:s.no||'',student_key:key,name:s.name,class_name:s.class||'',phone:s.phone||'',address:s.address||'',features:s.features||[],note:s.note||''},{onConflict:'student_key'});
   }
   for(const r of data.requests||[]){
     await put('workplace_requests',{id:r.id,title:r.title,person:r.person,phone:r.phone,address:r.address,sector:r.sector,quota:r.quota,hours:r.hours,transport:r.transport,gender:r.gender,days:r.days||[],features:r.features||[],note:r.note||'',teacher:r.teacher||'',suggested:r.suggested||''});
@@ -497,11 +514,10 @@ async function saveStudent(){
   let editId=document.getElementById('sEditId')?.value||'';
   let obj={id:editId||uid(),name:sName.value.trim(),class:sClass.value.trim(),phone:sPhone.value.trim(),address:sAddress.value.trim(),features:checked('studentFeatureChecks'),note:sNote.value.trim()};
   if(!obj.name)return alert('Öğrenci adı zorunlu.');
-  let idx=data.students.findIndex(x=>x.id===obj.id);
-  if(idx>=0) data.students[idx]=obj; else data.students.push(obj);
-  await upsert('students',{id:obj.id,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note});
+  let existed=data.students.some(x=>studentKey(x)===studentKey(obj) || (editId&&x.id===editId));
+  await upsertStudent(obj);
   clearStudentForm();renderAll();
-  alert(idx>=0?'Öğrenci bilgileri güncellendi.':'Öğrenci kaydedildi.');
+  alert(existed?'Öğrenci bilgileri güncellendi.':'Öğrenci kaydedildi.');
 }
 function clearStudentForm(){['sName','sClass','sPhone','sAddress','sNote'].forEach(id=>document.getElementById(id).value='');document.querySelectorAll('#studentFeatureChecks input').forEach(x=>x.checked=false);let e=document.getElementById('sEditId');if(e)e.value='';let b=document.getElementById('studentSaveBtn');if(b)b.textContent='Öğrenciyi Kaydet';let info=document.getElementById('studentEditInfo');if(info)info.classList.remove('show')}
 function sortStudents(key){if(studentSort.key===key)studentSort.dir*=-1;else{studentSort.key=key;studentSort.dir=1;}renderStudents()}
@@ -587,7 +603,7 @@ function normalizeStudentRows(rows){return rows.map(r=>{let base=arr(val(r,['Öz
 async function previewTeachersExcel(ev){let rows=await readExcel(ev);pendingTeachers=normalizeTeacherRows(rows);renderImportPreview('teacher',pendingTeachers);ev.target.value=''}
 async function previewStudentsExcel(ev){let rows=await readExcel(ev);pendingStudents=normalizeStudentRows(rows);renderImportPreview('student',pendingStudents);ev.target.value=''}
 function renderImportPreview(type,rows){let el=document.getElementById(type==='teacher'?'teacherPreview':'studentPreview');if(!rows.length){el.innerHTML='<div class="notice">Okunacak kayıt bulunamadı.</div>';return} if(type==='teacher'){el.innerHTML=`<table><tr><th>Ad Soyad</th><th>Şifre</th><th>Rol</th></tr>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.pass)}</td><td>${esc(r.role)}</td></tr>`).join('')}</table>`}else{el.innerHTML=`<table><tr><th>Öğrenci</th><th>Sınıf</th><th>Telefon</th><th>Özellikler</th></tr>${rows.map(r=>`<tr><td>${esc(r.name)}<br><span class="tiny">${esc(r.no||'')}</span></td><td>${esc(r.class)}</td><td>${esc(r.phone)}</td><td>${renderPills(r.features)}</td></tr>`).join('')}</table>`}}
-async function commitTeacherImport(){if(!pendingTeachers.length)return alert('Önce öğretmen Excel/CSV dosyası seçiniz.');let combined=dedupeTeachers([...(data.teachers||[]),...pendingTeachers]);let updated=0,added=0;for(const t of pendingTeachers){let k=(t.role==='admin')?'admin':teacherKey(t); if((data.teachers||[]).some(x=>((x.role==='admin')?'admin':teacherKey(x))===k))updated++; else added++;}data.teachers=combined;for(const t of data.teachers){let row={id:t.id,name:t.name,password:t.pass,role:t.role,teacher_key:t.role==='admin'?'admin':teacherKey(t)};await cloudUpsert('teachers',row,{onConflict:'teacher_key'});}saveLocal();pendingTeachers=[];clearImportPreview('teacher');renderAll();alert('Öğretmen listesi toplu kaydedildi. Yeni: '+added+' / Güncellenen: '+updated+'. Çift öğretmen kaydı oluşturulmadı.')}
+async function commitTeacherImport(){if(!pendingTeachers.length)return alert('Önce öğretmen Excel/CSV dosyası seçiniz.');let combined=dedupeTeachers([...(data.teachers||[]),...pendingTeachers]);let updated=0,added=0;for(const t of pendingTeachers){let k=(t.role==='admin')?'admin':teacherKey(t); if((data.teachers||[]).some(x=>((x.role==='admin')?'admin':teacherKey(x))===k))updated++; else added++;}data.teachers=combined;for(const t of data.teachers){let row={name:t.name,password:t.pass,role:t.role,teacher_key:t.role==='admin'?'admin':teacherKey(t)};await cloudUpsert('teachers',row,{onConflict:'teacher_key'});}saveLocal();pendingTeachers=[];clearImportPreview('teacher');renderAll();alert('Öğretmen listesi toplu kaydedildi. Yeni: '+added+' / Güncellenen: '+updated+'. Çift öğretmen kaydı oluşturulmadı.')}
 async function commitStudentImport(){if(!pendingStudents.length)return alert('Önce öğrenci Excel/CSV dosyası seçiniz.');let unique=dedupeStudents(pendingStudents);let updated=0,added=0;for(const s of unique){let existed=data.students.some(x=>studentKey(x)===studentKey(s));await upsertStudent(s);if(existed)updated++;else added++;}saveLocal();pendingStudents=[];clearImportPreview('student');renderAll();alert('Öğrenci listesi toplu kaydedildi. Yeni: '+added+' / Güncellenen: '+updated+'. Çift kayıt oluşturulmadı.')}
 function clearImportPreview(type){if(type==='teacher'){pendingTeachers=[];let e=document.getElementById('teacherPreview'); if(e)e.innerHTML=''}else{pendingStudents=[];let e=document.getElementById('studentPreview'); if(e)e.innerHTML=''}}
 function downloadTeacherTemplate(){let ws=XLSX.utils.json_to_sheet([{ 'Ad Soyad':'Ahmet Yılmaz','Şifre':'2468','Aktif':'Evet'},{'Ad Soyad':'Ayşe Kaya','Şifre':'3579','Aktif':'Evet'},{'Ad Soyad':'Mehmet Demir','Şifre':'4680','Aktif':'Evet'}]);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Ogretmenler');XLSX.writeFile(wb,'ogretmen_yukleme_sablonu.xlsx')}
