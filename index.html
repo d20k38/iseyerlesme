@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V9.5 Rapor Yedek Yerleştirme</title>
+<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V9.9 Öğretmen Şifre ve Yerleştirme</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -28,7 +28,7 @@
 </style>
 </head>
 <body>
-<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v9.3</small></h1><p>İşyeri talepleri, öğrenci havuzu ve akıllı yönlendirme sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
+<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v9.9</small></h1><p>İşyeri talepleri, öğrenci havuzu ve akıllı yönlendirme sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
 
 <div id="loginPage" class="login card noPrint">
   <h2>Portal Girişi</h2><p class="muted">Öğretmen adınızı seçip şifrenizi giriniz. Öğrenci işyeri talepleri altta şifresiz görünür.</p>
@@ -47,11 +47,13 @@
   <section id="students" class="tabPage card hidden"><h2>Öğrenci Havuzu</h2><div id="studentEditInfo" class="editInfo">Düzenleme modu: mevcut öğrenci kaydı güncellenecek.</div><input id="sEditId" type="hidden"><div class="grid"><div class="col-3"><label>Ad Soyad</label><input id="sName"></div><div class="col-2"><label>Sınıf/Şube</label><input id="sClass" placeholder="11/A"></div><div class="col-3"><label>Telefon</label><input id="sPhone" inputmode="tel"></div><div class="col-4"><label>Adres/Bölge</label><input id="sAddress"></div><div class="col-12"><label>Öğrenci Özellikleri</label><div id="studentFeatureChecks" class="checkGrid"></div></div><div class="col-12"><label>Not</label><textarea id="sNote"></textarea></div><div class="col-12 btnRow"><button id="studentSaveBtn" onclick="saveStudent()">Öğrenciyi Kaydet</button><button class="btnLight" onclick="clearStudentForm()">Temizle</button></div></div><h3>Kayıtlı Öğrenciler</h3><div class="notice"><b>Tekil kayıt kuralı:</b> Aynı okul numarası varsa okul numarasına göre, yoksa <b>Ad Soyad + Sınıf/Şube</b> bilgisine göre öğrenci tek kayıt tutulur. Yeniden eklenirse mevcut kayıt güncellenir.</div><div id="studentTable" class="tableWrap"></div><div id="studentCards" class="mobileCards"></div></section>
   <section id="match" class="tabPage card hidden"><h2>Akıllı Yönlendirme</h2><div class="grid"><div class="col-6"><label>İşyeri seç: uygun öğrenciler</label><select id="matchRequest" onchange="renderMatch()"></select></div><div class="col-6"><label>Öğrenci seç: uygun işler</label><select id="matchStudent" onchange="renderMatch()"></select></div></div><div class="grid"><div class="col-6"><h3>İşyerine Uygun Öğrenciler</h3><div id="matchStudents"></div></div><div class="col-6"><h3>Öğrenciye Uygun İşler</h3><div id="matchWorks"></div></div></div></section>
   <section id="studentRequests" class="tabPage card hidden"><h2>Öğrenci Talep ve Görüşme Bildirimleri</h2><div id="applicationTable" class="tableWrap"></div><div id="applicationCards" class="mobileCards"></div></section>
-  <section id="placements" class="tabPage card hidden"><h2>Kesin Yönlendirme / Yerleştirme</h2><div class="notice"><b>Kontrol:</b> Sistem aynı öğrencinin iki işyerine kesin yönlendirilmesini ve işyeri kontenjanının aşılmasını uyarır.</div><div class="grid" style="margin-top:12px"><div class="col-5"><label>İşyeri</label><select id="placementRequest" onchange="renderPlacementWarnings()"></select></div><div class="col-5"><label>Öğrenci</label><select id="placementStudent" onchange="renderPlacementWarnings()"></select></div><div class="col-2"><label>Durum</label><select id="placementStatus"><option>Yönlendirildi</option><option>Görüşmeye gitti</option><option>Kabul edildi</option><option>Kabul edilmedi</option><option>Yedek</option></select></div><div class="col-12" id="placementWarnings"></div><div class="col-12 btnRow"><button class="btn3" onclick="savePlacement()">Yerleştirmeyi Kaydet</button><button class="btnLight" onclick="renderPlacements()">Listeyi Yenile</button></div></div><h3>Kayıtlı Yerleştirmeler</h3><div id="placementTable" class="tableWrap"></div><div id="placementCards" class="mobileCards"></div></section>
+  <section id="placements" class="tabPage card hidden"><h2>Kesin Yönlendirme / Yerleştirme</h2><div class="notice"><b>Kontrol:</b> Sistem aynı öğrencinin iki işyerine kesin yönlendirilmesini ve işyeri kontenjanının aşılmasını uyarır. <b>Öğretmen kullanıcıları da bu ekrandan yerleştirme yapabilir.</b></div><div class="grid" style="margin-top:12px"><div class="col-5"><label>İşyeri</label><select id="placementRequest" onchange="renderPlacementWarnings()"></select></div><div class="col-5"><label>Öğrenci</label><select id="placementStudent" onchange="renderPlacementWarnings()"></select></div><div class="col-2"><label>Durum</label><select id="placementStatus"><option>Yönlendirildi</option><option>Görüşmeye gitti</option><option>Kabul edildi</option><option>Kabul edilmedi</option><option>Yedek</option></select></div><div class="col-12" id="placementWarnings"></div><div class="col-12 btnRow"><button class="btn3" onclick="savePlacement()">Yerleştirmeyi Kaydet</button><button class="btnLight" onclick="renderPlacements()">Listeyi Yenile</button></div></div><h3>Kayıtlı Yerleştirmeler</h3><div id="placementTable" class="tableWrap"></div><div id="placementCards" class="mobileCards"></div></section>
   <section id="admin" class="tabPage card hidden"><h2>Yönetici Paneli</h2><div class="grid">
     <div class="col-12 uploadBox"><h3>Supabase Ayarları</h3><p class="muted">Bu bilgiler yönetici tarafından bir kez girilir ve bu cihazın tarayıcısında saklanır. Vercel’e yüklenen aynı HTML dosyası her cihazda kullanılabilir.</p><div class="grid"><div class="col-6"><label>SUPABASE_URL</label><input id="sbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off"></div><div class="col-6"><label>SUPABASE_ANON_KEY</label><div style="display:flex;gap:8px"><input id="sbKey" type="password" placeholder="sb_publishable_... veya anon public key" autocomplete="off"><button class="btnLight" type="button" onclick="toggleKey()">Göster</button></div></div><div class="col-12 btnRow"><button class="btn3" onclick="saveSupabaseSettings()">Ayarları Kaydet</button><button class="btnLight" onclick="testSupabaseConnection()">Bağlantıyı Test Et</button><button class="btnWarn" onclick="clearSupabaseSettings()">Ayarları Temizle</button><span id="sbTestResult" class="pill">Durum bekleniyor</span></div></div></div>
     <div class="col-12 uploadBox"><h3>7 Gün Hareketsizlik Önlemi / Keep Alive</h3><p class="muted">Portal açıldığında Supabase’e otomatik heartbeat kaydı atılır. Kimse portala girmese bile çalışması için Vercel Cron dosyalarını projeye ekleyip Vercel Environment Variables alanına Supabase bilgilerinizi giriniz.</p><div class="grid"><div class="col-4"><div class="stat"><b id="kaLocalStatus">Bekleniyor</b><span>Portal heartbeat</span></div></div><div class="col-4"><div class="stat"><b id="kaLastTime">-</b><span>Son heartbeat zamanı</span></div></div><div class="col-4"><div class="stat"><b id="kaAdvice">Kontrol</b><span>Durum önerisi</span></div></div><div class="col-12 btnRow"><button class="btn3" onclick="manualHeartbeat()">Test Ping Gönder</button><button class="btnLight" onclick="refreshKeepAliveStatus()">Durumu Yenile</button><button class="btnLight" onclick="downloadCronReadme()">Vercel Cron Kurulum Notu İndir</button><span class="pill">Önerilen cron: günde 1 kez</span></div><div class="col-12"><div class="notice"><b>Önemli:</b> HTML içindeki heartbeat sadece portal açıldığında çalışır. Gerçek pasifleşme önlemi için Vercel Cron kullanılmalıdır. Bu sürüm cron için hazırdır.</div></div></div></div>
     <div class="col-6 uploadBox"><h3>Öğretmen Excel/CSV Yükle</h3><p class="muted">Her öğretmene ayrı şifre verilebilir. Sütunlar: <b>Ad Soyad</b>, <b>Şifre</b>, Aktif. Aynı ad varsa günceller. Yönetici en altta sabit kalır.</p><div class="btnRow"><button class="btnLight" onclick="downloadTeacherTemplate()">Öğretmen Şablonu İndir</button><input type="file" accept=".xlsx,.xls,.csv" onchange="previewTeachersExcel(event)"></div><div id="teacherPreview" class="tableWrap" style="margin-top:10px"></div><div class="btnRow" style="margin-top:10px"><button class="btn3" onclick="commitTeacherImport()">Önizlemeyi Toplu Kaydet</button><button class="btnLight" onclick="clearImportPreview('teacher')">Önizlemeyi Temizle</button></div></div>
+    <div class="col-12 uploadBox"><h3>Öğretmen Şifreleri ve Yetkileri</h3><p class="muted">Bu bölüm sadece yönetici girişinde görünür. Ana ekranda öğretmen şifreleri gösterilmez. Öğretmenler kendi şifreleriyle giriş yapıp yerleştirme ekranından öğrenci yönlendirebilir.</p><div class="btnRow" style="margin-bottom:10px"><button class="btnLight" onclick="toggleTeacherPasswords()" id="teacherPassToggleBtn">Şifreleri Göster</button><button class="btnLight" onclick="renderTeachersAdmin()">Listeyi Yenile</button></div><div id="teacherAdminTable" class="tableWrap"></div><div id="teacherAdminCards" class="mobileCards"></div></div>
+
     <div class="col-6 uploadBox"><h3>Öğrenci Excel/CSV Yükle</h3><p class="muted">Sütunlar: Öğrenci No, Ad Soyad/Öğrenci, Sınıf, Şube, Telefon, Adres, Özellikler veya ayrı özellik sütunları.</p><div class="btnRow"><button class="btnLight" onclick="downloadStudentTemplate()">Öğrenci Şablonu İndir</button><input type="file" accept=".xlsx,.xls,.csv" onchange="previewStudentsExcel(event)"></div><div id="studentPreview" class="tableWrap" style="margin-top:10px"></div><div class="btnRow" style="margin-top:10px"><button class="btn3" onclick="commitStudentImport()">Önizlemeyi Toplu Kaydet</button><button class="btnLight" onclick="clearImportPreview('student')">Önizlemeyi Temizle</button></div></div>
     <div class="col-12 notice"><b>Excel özellik sütunları:</b> Logo, Zirve, DataSoft, Excel İyi, Devamsızlık Yok, Aktif alanlarına Evet / 1 / ✓ / Var yazarsanız öğrenci özelliği otomatik işlenir. Ayrıca tek hücrede virgülle ayrılmış “Özellikler” alanı da desteklenir.</div>
 
@@ -84,6 +86,7 @@ try{initSupabase();}catch(e){console.warn('İlk Supabase başlatma atlandı:',e)
 const FEATURES=['Logo kullanabilir','Zirve kullanabilir','DataSoft kullanabilir','LUCA kullanır','Excel iyi','Klavyesi iyi','Devamsızlık yok','Aktif / girişken','İletişimi güçlü','Diksiyonu düzgün','Sorumluluk sahibi','Ulaşım sorunu yok','Dosyalama düzeni iyi','E-fatura/e-arşiv bilgisi','Ofis programları iyi','Takım çalışmasına uygun'];
 const DAYS=['Pazartesi, Salı, Çarşamba','Çarşamba, Perşembe, Cuma','Haftanın 3 günü / işletme ile belirlenecek'];
 let data={teachers:[{name:'Ahmet Yılmaz',pass:'1234',role:'teacher'},{name:'Ayşe Kaya',pass:'1234',role:'teacher'},{name:'Yönetici',pass:'18309',role:'admin'}],students:[],requests:[],applications:[],placements:[],heartbeats:[]};let currentUser=null;
+let showTeacherPasswords=false;
 function uid(){return crypto.randomUUID?crypto.randomUUID():'id_'+Date.now()+'_'+Math.random().toString(16).slice(2)}
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function arr(v){return Array.isArray(v)?v:(v?String(v).split(',').map(x=>x.trim()).filter(Boolean):[])}
@@ -338,7 +341,7 @@ function login(){
 }
 function logout(){currentUser=null;document.getElementById('app').classList.add('hidden');document.getElementById('loginPage').classList.remove('hidden');document.getElementById('publicLanding').classList.remove('hidden');document.getElementById('loginPass').value='';renderPublic()}
 function showTab(id){document.querySelectorAll('.tabPage').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));renderAll()}
-function renderAll(){renderLogin();renderPublic();renderDashboard();renderStudents();renderMatchSelectors();renderApplications();renderPlacements();renderReports();let dl=document.getElementById('studentNames');if(dl)dl.innerHTML=data.students.map(s=>`<option value="${esc(s.name+' / '+s.class)}">`).join('')}
+function renderAll(){renderLogin();renderPublic();renderDashboard();renderStudents();renderMatchSelectors();renderApplications();renderPlacements();renderReports();renderTeachersAdmin();let dl=document.getElementById('studentNames');if(dl)dl.innerHTML=data.students.map(s=>`<option value="${esc(s.name+' / '+s.class)}">`).join('')}
 function renderPills(list){return arr(list).map(f=>`<span class="pill">${esc(f)}</span>`).join('')}
 function renderPublic(){let q=(document.getElementById('publicSearch')?.value||'').toLowerCase();let rows=data.requests.filter(r=>(r.title+' '+r.address+' '+r.sector+' '+arr(r.features).join(' ')).toLowerCase().includes(q));let table=`<table><tr><th>İşyeri</th><th>Adres</th><th>Günler</th><th>Özellik</th><th>Öğrenci Talebi</th></tr>${rows.map(r=>`<tr><td><b>${esc(r.title)}</b><br>${esc(r.sector)}<br><span class="tiny">Kontenjan: ${esc(r.quota||1)}</span></td><td>${esc(r.address)}<br>${esc(r.hours||'')}</td><td>${renderPills(r.days)}</td><td>${renderPills(r.features)}<br><span class="muted">${esc(r.note||'')}</span></td><td>${studentActionHTML(r.id)}</td></tr>`).join('')}</table>`;document.getElementById('publicList').innerHTML=rows.length?table:'<div class="notice">Henüz işyeri talebi yok.</div>';document.getElementById('publicCards').innerHTML=rows.map(r=>`<div class="reqCard"><b>${esc(r.title)}</b><div class="muted">${esc(r.sector)} - ${esc(r.address)}</div>${renderPills(r.days)}<div>${renderPills(r.features)}</div><p class="muted">${esc(r.note||'')}</p>${studentActionHTML(r.id)}</div>`).join('')}
 function studentActionHTML(id){return `<div class="studentAction"><input id="an_${id}" placeholder="Ad Soyad"><input id="ac_${id}" placeholder="Sınıf/Şube" style="margin-top:6px"><input id="ap_${id}" placeholder="Telefon" inputmode="tel" style="margin-top:6px"><textarea id="ao_${id}" placeholder="Kısa not" style="margin-top:6px"></textarea><div class="btnRow" style="margin-top:6px"><button class="btn3" onclick="studentApply('${id}','Beni bu işe öner')">Beni bu işe öner</button><button class="btnWarn" onclick="studentApply('${id}','Görüşmeye gidiyorum')">Görüşmeye gidiyorum</button></div></div>`}
@@ -381,6 +384,54 @@ let pendingTeachers=[], pendingStudents=[];
 let studentSort={key:'name',dir:1};
 function yes(v){return ['evet','e','1','true','var','✓','x','aktif'].includes(String(v||'').trim().toLowerCase())}
 function val(r,keys){for(const k of keys){if(r[k]!==undefined && String(r[k]).trim()!=='')return String(r[k]).trim()}return ''}
+
+function toggleTeacherPasswords(){
+  showTeacherPasswords=!showTeacherPasswords;
+  let b=document.getElementById('teacherPassToggleBtn');
+  if(b)b.textContent=showTeacherPasswords?'Şifreleri Gizle':'Şifreleri Göster';
+  renderTeachersAdmin();
+}
+function renderTeachersAdmin(){
+  let box=document.getElementById('teacherAdminTable'), cards=document.getElementById('teacherAdminCards');
+  if(!box && !cards) return;
+  let rows=dedupeTeachers(data.teachers||[]).filter(t=>t && t.role!=='admin');
+  let passCell=t=> showTeacherPasswords ? `<input id="tp_${t.id}" value="${esc(t.pass||t.password||'')}" style="min-width:110px">` : '••••••';
+  let table=`<table><tr><th>Öğretmen</th><th>Şifre</th><th>Yetki</th><th>İşlem</th></tr>${rows.map(t=>`<tr><td><b>${esc(t.name||'')}</b></td><td>${passCell(t)}</td><td><span class="pill">Yerleştirme yapabilir</span></td><td><div class="btnRow"><button class="btn3" onclick="saveTeacherPassword('${t.id}')">Güncelle</button><button class="btnBad" onclick="removeTeacher('${t.id}')">Sil</button></div></td></tr>`).join('')}</table>`;
+  if(box)box.innerHTML=rows.length?table:'<div class="notice">Henüz öğretmen kaydı yok. Excel/CSV yükleyiniz.</div>';
+  if(cards)cards.innerHTML=rows.map(t=>`<div class="stuCard"><b>${esc(t.name||'')}</b><div class="muted">Şifre: ${showTeacherPasswords?esc(t.pass||t.password||''):'••••••'}</div><span class="pill">Yerleştirme yapabilir</span><div class="btnRow" style="margin-top:8px"><button class="btn3" onclick="saveTeacherPassword('${t.id}')">Güncelle</button><button class="btnBad" onclick="removeTeacher('${t.id}')">Sil</button></div></div>`).join('');
+}
+async function saveTeacherPassword(id){
+  let t=(data.teachers||[]).find(x=>x.id===id);
+  if(!t)return alert('Öğretmen bulunamadı.');
+  let input=document.getElementById('tp_'+id);
+  if(showTeacherPasswords && input){
+    let p=String(input.value||'').trim();
+    if(!p)return alert('Şifre boş olamaz.');
+    t.pass=p; t.password=p;
+  }else{
+    return alert('Şifreyi değiştirmek için önce “Şifreleri Göster” düğmesine basınız.');
+  }
+  data.teachers=dedupeTeachers(data.teachers||[]);
+  saveLocal();
+  if(DB){
+    let row={id:t.id,name:t.name,password:t.pass||t.password||'',role:t.role||'teacher',teacher_key:t.role==='admin'?'admin':teacherKey(t)};
+    let r=await DB.from('teachers').upsert(row,{onConflict:'teacher_key'});
+    if(r.error) await DB.from('teachers').upsert({id:t.id,name:t.name,password:t.pass||t.password||'',role:t.role||'teacher'});
+  }
+  renderAll();
+  alert('Öğretmen şifresi güncellendi.');
+}
+async function removeTeacher(id){
+  let t=(data.teachers||[]).find(x=>x.id===id);
+  if(!t || t.role==='admin')return alert('Bu kayıt silinemez.');
+  if(!confirm((t.name||'Öğretmen')+' kaydı silinsin mi?'))return;
+  data.teachers=(data.teachers||[]).filter(x=>x.id!==id);
+  ensureAdmin();
+  saveLocal();
+  if(DB) await DB.from('teachers').delete().eq('id',id);
+  renderAll();
+}
+
 function normalizeTeacherRows(rows){let list=rows.map(r=>({id:uid(),name:val(r,['Ad Soyad','ad soyad','Öğretmen','Ogretmen','Öğretmen Adı','Ogretmen Adi']),pass:val(r,['Şifre','Sifre','Parola','Password'])||String(1000+(Math.floor(Math.random()*8999))),role:'teacher',active:val(r,['Aktif'])||'Evet'})).filter(x=>x.name);let admin=(data.teachers||[]).find(t=>t.role==='admin')||{id:'admin',name:'Yönetici',pass:'18309',role:'admin'};list=list.filter(t=>!['yönetici','yonetici'].includes(normText(t.name)));list.push(admin);return dedupeTeachers(list)}
 function normalizeStudentRows(rows){return rows.map(r=>{let base=arr(val(r,['Özellikler','Ozellikler','Etiketler']));let map=[['Logo','Logo kullanabilir'],['Zirve','Zirve kullanabilir'],['DataSoft','DataSoft kullanabilir'],['Datasoft','DataSoft kullanabilir'],['Excel İyi','Excel iyi'],['Excel Iyi','Excel iyi'],['Excel','Excel iyi'],['Devamsızlık Yok','Devamsızlık yok'],['Devamsizlik Yok','Devamsızlık yok'],['LUCA','LUCA kullanır'],['Luca','LUCA kullanır'],['LUCA kullanır','LUCA kullanır'],['Klavye','Klavyesi iyi'],['Klavyesi İyi','Klavyesi iyi'],['Klavyesi Iyi','Klavyesi iyi'],['Aktif','Aktif / girişken'],['Girişken','Aktif / girişken'],['Giriskin','Aktif / girişken']];map.forEach(([col,label])=>{if(yes(r[col]))base.push(label)});base=[...new Set(base.filter(Boolean))];let sinif=val(r,['Sınıf','Sinif','Sınıf/Şube','Sinif/Sube']);let sube=val(r,['Şube','Sube']);let cls=sinif && sube && !sinif.includes('/') ? sinif+'/'+sube : sinif;return {id:uid(),no:val(r,['Öğrenci No','Ogrenci No','No','Okul No']),name:val(r,['Öğrenci','Ogrenci','Ad Soyad','Adı Soyadı','Adi Soyadi']),class:cls,phone:val(r,['Telefon','Tel','Cep Telefonu']),address:val(r,['Adres','Bölge','Bolge']),features:base,note:val(r,['Not','Açıklama','Aciklama'])}}).filter(x=>x.name)}
 async function previewTeachersExcel(ev){let rows=await readExcel(ev);pendingTeachers=normalizeTeacherRows(rows);renderImportPreview('teacher',pendingTeachers);ev.target.value=''}
