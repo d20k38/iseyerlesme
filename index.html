@@ -133,19 +133,69 @@
   <section id="reports" class="tabPage card hidden"><h2>Raporlar ve Özet</h2><div class="notice teacherOnlySummary"><b>Öğretmen görünümü:</b> Bu ekranda yalnızca genel özet gösterilir. CSV ve yazdırma işlemleri yönetici panelindedir.</div><div class="btnRow noPrint adminOnly"><button onclick="window.print()">Yazdır</button><button class="btnLight" onclick="exportCSV('requests')">İşyeri CSV</button><button class="btnLight" onclick="exportCSV('students')">Öğrenci CSV</button><button class="btnLight" onclick="exportCSV('applications')">Öğrenci Talepleri CSV</button><button class="btnLight" onclick="exportCSV('placements')">Yerleştirme CSV</button><button class="btn3" onclick="exportJSON()">Tam Yedek JSON</button></div><div id="reportSummary" class="grid" style="margin:12px 0"></div><div class="adminReportDetail"><h3>Açıkta Kalan Öğrenciler</h3><div id="reportOpenStudents" class="tableWrap"></div><h3>Kontenjanı Dolmayan İşyerleri</h3><div id="reportOpenRequests" class="tableWrap"></div><h3>Yerleştirme Listesi</h3><div id="reportPlacements" class="tableWrap"></div><h3>İşyeri Talepleri</h3><div id="reportRequests" class="tableWrap"></div><h3>Öğrenci Talepleri</h3><div id="reportApps" class="tableWrap"></div></div></section>
 </div><div class="footerNote noPrint">Kayseri Ticaret MTAL - İşletmelerde Mesleki Eğitim Yönlendirme Portalı</div>
 <script>
-/* SUPABASE AYARLARI: Yönetici panelinden girilir ve localStorage içinde saklanır. */
+/* SUPABASE AYARLARI: Yönetici panelinden girilir ve bu cihazın tarayıcısında kalıcı saklanır. */
 const DEFAULT_SUPABASE_URL = "";
 const DEFAULT_SUPABASE_ANON_KEY = "";
-let SUPABASE_URL = localStorage.getItem('isyeriPortalSupabaseUrl') || DEFAULT_SUPABASE_URL;
-let SUPABASE_ANON_KEY = localStorage.getItem('isyeriPortalSupabaseAnonKey') || DEFAULT_SUPABASE_ANON_KEY;
+const SB_URL_KEYS = ['isyeriPortalSupabaseUrl','isyeriPortalSupabaseURL','kaytimPortalSupabaseUrl'];
+const SB_KEY_KEYS = ['isyeriPortalSupabaseAnonKey','isyeriPortalSupabaseKey','kaytimPortalSupabaseAnonKey'];
+function storageGet(keys){
+  for(const area of [localStorage, sessionStorage]){
+    try{
+      for(const key of keys){
+        const v = area.getItem(key);
+        if(v && String(v).trim()) return String(v).trim();
+      }
+    }catch(e){}
+  }
+  try{
+    if(typeof data !== 'undefined' && data && data.settings){
+      if(keys===SB_URL_KEYS && data.settings.supabaseUrl) return String(data.settings.supabaseUrl).trim();
+      if(keys===SB_KEY_KEYS && data.settings.supabaseAnonKey) return String(data.settings.supabaseAnonKey).trim();
+    }
+  }catch(e){}
+  return '';
+}
+function storageSet(keys,value){
+  let ok=false;
+  for(const area of [localStorage, sessionStorage]){
+    try{ keys.forEach(k=>area.setItem(k,value)); ok=true; }catch(e){ console.warn('Ayar saklama hatası:', e); }
+  }
+  return ok;
+}
+function storageRemove(keys){
+  for(const area of [localStorage, sessionStorage]){
+    try{ keys.forEach(k=>area.removeItem(k)); }catch(e){}
+  }
+}
+let SUPABASE_URL = storageGet(SB_URL_KEYS) || DEFAULT_SUPABASE_URL;
+let SUPABASE_ANON_KEY = storageGet(SB_KEY_KEYS) || DEFAULT_SUPABASE_ANON_KEY;
 let DB = null;
+function normalizeSupabaseUrl(u){return String(u||'').trim().replace(/\/+$/,'');}
+function loadSavedSupabaseSettings(){
+  SUPABASE_URL = normalizeSupabaseUrl(storageGet(SB_URL_KEYS) || DEFAULT_SUPABASE_URL || '');
+  SUPABASE_ANON_KEY = String(storageGet(SB_KEY_KEYS) || DEFAULT_SUPABASE_ANON_KEY || '').trim();
+  return {url:SUPABASE_URL,key:SUPABASE_ANON_KEY};
+}
+function persistSupabaseSettings(u,k){
+  u=normalizeSupabaseUrl(u); k=String(k||'').trim();
+  const ok1=storageSet(SB_URL_KEYS,u), ok2=storageSet(SB_KEY_KEYS,k);
+  try{
+    if(typeof data !== 'undefined' && data){
+      data.settings = data.settings || {};
+      data.settings.supabaseUrl = u;
+      data.settings.supabaseAnonKey = k;
+      localStorage.setItem('isyeriPortalV95', JSON.stringify(data));
+    }
+  }catch(e){console.warn('Ayarlar data yedeğine yazılamadı:',e)}
+  SUPABASE_URL=u; SUPABASE_ANON_KEY=k;
+  return ok1 && ok2;
+}
 function initSupabase(){
-  SUPABASE_URL = (localStorage.getItem('isyeriPortalSupabaseUrl') || DEFAULT_SUPABASE_URL || '').trim();
-  SUPABASE_ANON_KEY = (localStorage.getItem('isyeriPortalSupabaseAnonKey') || DEFAULT_SUPABASE_ANON_KEY || '').trim();
+  loadSavedSupabaseSettings();
   DB = null;
   try{
     if(SUPABASE_URL.startsWith('https://') && SUPABASE_ANON_KEY && window.supabase && typeof window.supabase.createClient==='function'){
-      DB = window.supabase.createClient(SUPABASE_URL.replace(/\/+$/,''), SUPABASE_ANON_KEY);
+      DB = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
   }catch(e){
     console.warn('Supabase JS başlatılamadı:', e);
@@ -156,7 +206,7 @@ function initSupabase(){
 try{initSupabase();}catch(e){console.warn('İlk Supabase başlatma atlandı:',e); DB=null;}
 const FEATURES=['Logo kullanabilir','Zirve kullanabilir','DataSoft kullanabilir','LUCA kullanır','Excel iyi','Klavyesi iyi','Devamsızlık yok','Aktif / girişken','İletişimi güçlü','Diksiyonu düzgün','Sorumluluk sahibi','Ulaşım sorunu yok','Dosyalama düzeni iyi','E-fatura/e-arşiv bilgisi','Ofis programları iyi','Takım çalışmasına uygun'];
 const DAYS=['Pazartesi, Salı, Çarşamba','Çarşamba, Perşembe, Cuma','Haftanın 3 günü / işletme ile belirlenecek'];
-let data={teachers:[{name:'Ahmet Yılmaz',pass:'1234',role:'teacher'},{name:'Ayşe Kaya',pass:'1234',role:'teacher'},{name:'Yönetici',pass:'18309',role:'admin'}],students:[],requests:[],applications:[],placements:[],placementHistory:[],heartbeats:[]};let currentUser=null;
+let data={teachers:[{name:'Ahmet Yılmaz',pass:'1234',role:'teacher'},{name:'Ayşe Kaya',pass:'1234',role:'teacher'},{name:'Yönetici',pass:'18309',role:'admin'}],students:[],requests:[],applications:[],placements:[],placementHistory:[],heartbeats:[],settings:{}};let currentUser=null;
 let showTeacherPasswords=false;
 function uid(){return crypto.randomUUID?crypto.randomUUID():'id_'+Date.now()+'_'+Math.random().toString(16).slice(2)}
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
@@ -169,10 +219,24 @@ function setCloud(on){
   const setup=document.getElementById('setupBox');
   if(setup) setup.classList.toggle('hidden',on);
 }
-function fillSupabaseSettings(){let u=document.getElementById('sbUrl'),k=document.getElementById('sbKey'); if(u)u.value=SUPABASE_URL||''; if(k)k.value=SUPABASE_ANON_KEY||'';}
+function fillSupabaseSettings(){loadSavedSupabaseSettings();let u=document.getElementById('sbUrl'),k=document.getElementById('sbKey'); if(u)u.value=SUPABASE_URL||''; if(k)k.value=SUPABASE_ANON_KEY||'';}
 function toggleKey(){let k=document.getElementById('sbKey'); if(!k)return; k.type=k.type==='password'?'text':'password';}
-async function saveSupabaseSettings(){let u=document.getElementById('sbUrl').value.trim();let k=document.getElementById('sbKey').value.trim(); if(!u||!k)return alert('SUPABASE_URL ve SUPABASE_ANON_KEY alanlarını doldurun.'); localStorage.setItem('isyeriPortalSupabaseUrl',u); localStorage.setItem('isyeriPortalSupabaseAnonKey',k); initSupabase(); fillSupabaseSettings(); await testSupabaseConnection(true); try{await loadAll();}catch(e){console.warn(e)} alert('Supabase ayarları kaydedildi.');}
-function clearSupabaseSettings(){if(!confirm('Supabase ayarları bu cihazdan temizlensin mi?'))return; localStorage.removeItem('isyeriPortalSupabaseUrl'); localStorage.removeItem('isyeriPortalSupabaseAnonKey'); initSupabase(); fillSupabaseSettings(); setCloud(false); let el=document.getElementById('sbTestResult'); if(el)el.textContent='Ayarlar temizlendi';}
+async function saveSupabaseSettings(){
+  let u=(document.getElementById('sbUrl')?.value||'').trim();
+  let k=(document.getElementById('sbKey')?.value||'').trim();
+  if(!u||!k)return alert('SUPABASE_URL ve SUPABASE_ANON_KEY alanlarını doldurun.');
+  const saved=persistSupabaseSettings(u,k);
+  initSupabase();
+  fillSupabaseSettings();
+  let checkU=storageGet(SB_URL_KEYS), checkK=storageGet(SB_KEY_KEYS);
+  let el=document.getElementById('sbTestResult');
+  if(el){el.className='notice';el.innerHTML=saved?'✅ Ayarlar bu cihazda kaydedildi. Bağlantı test ediliyor...':'⚠️ Tarayıcı kalıcı kayıt izni vermedi; oturum süresince kullanılacak.';}
+  if(!checkU || !checkK){alert('Ayarlar tarayıcıda kalıcı saklanamadı. Siteyi Vercel üzerinden açın; gizli sekme veya dosya:// kullanımında kalıcılık sorun olabilir.');}
+  await testSupabaseConnection(true);
+  try{await loadAll();}catch(e){console.warn(e)}
+  alert('Supabase ayarları kaydedildi. Sayfayı yenilediğinizde alanlar dolu gelmelidir.');
+}
+function clearSupabaseSettings(){if(!confirm('Supabase ayarları bu cihazdan temizlensin mi?'))return; storageRemove(SB_URL_KEYS); storageRemove(SB_KEY_KEYS); try{if(data&&data.settings){data.settings.supabaseUrl='';data.settings.supabaseAnonKey='';saveLocal();}}catch(e){} initSupabase(); fillSupabaseSettings(); setCloud(false); let el=document.getElementById('sbTestResult'); if(el)el.textContent='Ayarlar temizlendi';}
 function withTimeout(promise, ms, label){
   return Promise.race([
     promise,
@@ -232,8 +296,7 @@ async function testSupabaseConnection(silent=false){
     }
     add(true,'SUPABASE_ANON_KEY girilmiş');
 
-    localStorage.setItem('isyeriPortalSupabaseUrl',url);
-    localStorage.setItem('isyeriPortalSupabaseAnonKey',key);
+    persistSupabaseSettings(url,key);
 
     function xhrTest(path, ms=6000){
       return new Promise(resolve=>{
@@ -346,7 +409,7 @@ function ensureAdmin(){
   if(admin){admin.name='Yönetici';admin.role='admin';admin.pass=admin.pass||admin.password||'18309';admin.id=admin.id||'admin';}
   else data.teachers.push({id:'admin',name:'Yönetici',pass:'18309',role:'admin'});
 }
-function loadLocal(){try{let old=JSON.parse(localStorage.getItem('isyeriPortalV95')||'{}');data={...data,...old}}catch(e){} ensureAdmin();data.students=dedupeStudents(data.students||[]);data.placements=data.placements||[];data.placementHistory=data.placementHistory||[];}
+function loadLocal(){try{let old=JSON.parse(localStorage.getItem('isyeriPortalV95')||'{}');data={...data,...old}}catch(e){} try{if(data.settings){if(data.settings.supabaseUrl && !storageGet(SB_URL_KEYS)) storageSet(SB_URL_KEYS,data.settings.supabaseUrl); if(data.settings.supabaseAnonKey && !storageGet(SB_KEY_KEYS)) storageSet(SB_KEY_KEYS,data.settings.supabaseAnonKey); initSupabase();}}catch(e){} ensureAdmin();data.students=dedupeStudents(data.students||[]);data.placements=data.placements||[];data.placementHistory=data.placementHistory||[];}
 function saveLocal(){localStorage.setItem('isyeriPortalV95',JSON.stringify(data))}
 function normText(v){return String(v||'').trim().toLocaleLowerCase('tr-TR').replace(/\s+/g,' ')}
 function studentKey(s){let no=String(s?.no||s?.student_no||'').trim();if(no)return 'no:'+no;return 'nc:'+normText(s?.name)+'|'+normText(s?.class)}
