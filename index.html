@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.7 Supabase Tanı Ekranı</title>
+<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.8 Öğrenci Düzenleme ve Supabase Test Düzeltme</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#eef5f9;--card:#fff;--ink:#102033;--muted:#667085;--main:#0f5e8c;--main2:#0b7fb3;--line:#d7e3ec;--ok:#16803c;--warn:#b7791f;--bad:#b42318;--soft:#eef8fd;--shadow:0 10px 28px rgba(16,24,40,.10)}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#edf4f8,#fbfdff);color:var(--ink)}body{font-size:15px}header{background:linear-gradient(135deg,#073b5a,#0f80b5);color:#fff;padding:16px 18px;box-shadow:0 4px 18px rgba(0,0,0,.16)}header h1{margin:0;font-size:22px;line-height:1.15}header p{margin:5px 0 0;opacity:.92}.wrap{max-width:1280px;margin:auto;padding:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}.login{max-width:560px;margin:18px auto 12px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-2{grid-column:span 2}label{display:block;font-weight:800;font-size:13px;margin-bottom:6px;color:#24364b}input,select,textarea{width:100%;min-height:46px;padding:12px;border:1px solid #cbd5df;border-radius:14px;font-size:16px;background:#fff;color:var(--ink)}textarea{min-height:92px;resize:vertical}button{border:0;border-radius:14px;padding:12px 15px;min-height:46px;font-weight:900;cursor:pointer;background:var(--main);color:#fff;font-size:15px}button:hover{filter:brightness(.96)}.btn2{background:#344054}.btn3{background:#16803c}.btnWarn{background:#b7791f}.btnBad{background:#b42318}.btnLight{background:#edf6fb;color:#0f5e8c;border:1px solid #c8dbea}.btnWide{width:100%}.btnRow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:5px;margin-bottom:12px}.tab{white-space:nowrap;background:#dcecf5;color:#0f4e73;border:1px solid #bdd7e7}.tab.active{background:#0f5e8c;color:white}.hidden{display:none!important}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;border-radius:999px;background:#eef6ff;border:1px solid #c7def0;padding:5px 9px;font-size:12px;font-weight:800;color:#0f5e8c;margin:2px}.muted{color:var(--muted);font-size:13px;line-height:1.45}.notice{padding:12px;border-radius:14px;background:#fff8e8;border:1px solid #f1d08a;color:#6b4300}.okbox{background:#ecfdf3;border-color:#bbf7d0;color:#14532d}.badbox{background:#fff1f0;border-color:#fecaca;color:#7f1d1d}.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}table{width:100%;border-collapse:collapse;background:white}th,td{border-bottom:1px solid #e5ebf0;padding:10px;text-align:left;vertical-align:top;font-size:13px}th{background:#f0f7fb;color:#1d4058;position:sticky;top:0;z-index:1}.stat{padding:14px;border-radius:16px;background:#f5faff;border:1px solid #d5e9f7}.stat b{font-size:28px;display:block;color:#0f5e8c}.checkGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.check{border:1px solid #d6e0e8;border-radius:12px;padding:10px;background:#fbfdff;font-size:13px;font-weight:700}.check input{width:auto;min-height:auto;margin-right:6px}.dayBox{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.badgeOk,.badgeWarn,.badgeBad{color:#fff;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}.badgeOk{background:var(--ok)}.badgeWarn{background:var(--warn)}.badgeBad{background:var(--bad)}.mobileCards{display:none}.reqCard,.stuCard,.matchCard{border:1px solid #dce7ef;border-radius:15px;padding:12px;margin:9px 0;background:#fff}.reqCard b,.stuCard b,.matchCard b{color:#0f5e8c}.uploadBox{border:2px dashed #b8d5e7;background:#f7fbfe;border-radius:16px;padding:12px}.tiny{font-size:12px}.config{font-family:Consolas,monospace;background:#0b1020;color:#e7eefc;border-radius:12px;padding:10px;white-space:pre-wrap;overflow:auto}.footerNote{text-align:center;color:#667085;font-size:12px;margin:20px 0}.studentAction{border:2px solid #d7eaf6;background:#f7fcff;border-radius:16px;padding:12px;margin-top:10px}.statusDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#b42318;margin-right:6px}.statusDot.on{background:#16803c}.floatingSave{position:sticky;bottom:8px;background:#fff;border:1px solid #d8e5ef;border-radius:16px;padding:8px;box-shadow:0 8px 20px rgba(16,24,40,.13);z-index:10}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#edf4f8,#fbfdff);color:var(--ink)}body{font-size:15px}header{background:linear-gradient(135deg,#073b5a,#0f80b5);color:#fff;padding:16px 18px;box-shadow:0 4px 18px rgba(0,0,0,.16)}header h1{margin:0;font-size:22px;line-height:1.15}header p{margin:5px 0 0;opacity:.92}.wrap{max-width:1280px;margin:auto;padding:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}.login{max-width:560px;margin:18px auto 12px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}.col-2{grid-column:span 2}label{display:block;font-weight:800;font-size:13px;margin-bottom:6px;color:#24364b}input,select,textarea{width:100%;min-height:46px;padding:12px;border:1px solid #cbd5df;border-radius:14px;font-size:16px;background:#fff;color:var(--ink)}textarea{min-height:92px;resize:vertical}button{border:0;border-radius:14px;padding:12px 15px;min-height:46px;font-weight:900;cursor:pointer;background:var(--main);color:#fff;font-size:15px}button:hover{filter:brightness(.96)}.btn2{background:#344054}.btn3{background:#16803c}.btnWarn{background:#b7791f}.btnBad{background:#b42318}.btnLight{background:#edf6fb;color:#0f5e8c;border:1px solid #c8dbea}.btnWide{width:100%}.btnRow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:5px;margin-bottom:12px}.tab{white-space:nowrap;background:#dcecf5;color:#0f4e73;border:1px solid #bdd7e7}.tab.active{background:#0f5e8c;color:white}.hidden{display:none!important}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;border-radius:999px;background:#eef6ff;border:1px solid #c7def0;padding:5px 9px;font-size:12px;font-weight:800;color:#0f5e8c;margin:2px}.muted{color:var(--muted);font-size:13px;line-height:1.45}.notice{padding:12px;border-radius:14px;background:#fff8e8;border:1px solid #f1d08a;color:#6b4300}.okbox{background:#ecfdf3;border-color:#bbf7d0;color:#14532d}.badbox{background:#fff1f0;border-color:#fecaca;color:#7f1d1d}.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}table{width:100%;border-collapse:collapse;background:white}th,td{border-bottom:1px solid #e5ebf0;padding:10px;text-align:left;vertical-align:top;font-size:13px}th{background:#f0f7fb;color:#1d4058;position:sticky;top:0;z-index:1}.stat{padding:14px;border-radius:16px;background:#f5faff;border:1px solid #d5e9f7}.stat b{font-size:28px;display:block;color:#0f5e8c}.checkGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.check{border:1px solid #d6e0e8;border-radius:12px;padding:10px;background:#fbfdff;font-size:13px;font-weight:700}.check input{width:auto;min-height:auto;margin-right:6px}.dayBox{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.badgeOk,.badgeWarn,.badgeBad{color:#fff;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}.badgeOk{background:var(--ok)}.badgeWarn{background:var(--warn)}.badgeBad{background:var(--bad)}.mobileCards{display:none}.reqCard,.stuCard,.matchCard{border:1px solid #dce7ef;border-radius:15px;padding:12px;margin:9px 0;background:#fff}.reqCard b,.stuCard b,.matchCard b{color:#0f5e8c}.uploadBox{border:2px dashed #b8d5e7;background:#f7fbfe;border-radius:16px;padding:12px}.tiny{font-size:12px}.config{font-family:Consolas,monospace;background:#0b1020;color:#e7eefc;border-radius:12px;padding:10px;white-space:pre-wrap;overflow:auto}.footerNote{text-align:center;color:#667085;font-size:12px;margin:20px 0}.studentAction{border:2px solid #d7eaf6;background:#f7fcff;border-radius:16px;padding:12px;margin-top:10px}.statusDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#b42318;margin-right:6px}.statusDot.on{background:#16803c}.floatingSave{position:sticky;bottom:8px;background:#fff;border:1px solid #d8e5ef;border-radius:16px;padding:8px;box-shadow:0 8px 20px rgba(16,24,40,.13);z-index:10}.sortable{cursor:pointer;user-select:none}.sortable:after{content:" ⇅";font-size:11px;color:#667085}.editInfo{display:none;margin:8px 0;padding:10px;border-radius:12px;background:#eef8fd;border:1px solid #c7def0;color:#0f5e8c;font-weight:800}.editInfo.show{display:block}
 @media(max-width:760px){header{padding:14px 12px}header h1{font-size:18px}.wrap{padding:9px}.card{padding:13px;border-radius:16px;margin-bottom:10px}.login{margin:10px 8px}.col-2,.col-3,.col-4,.col-6,.col-8{grid-column:span 12}.checkGrid{grid-template-columns:1fr}.dayBox{grid-template-columns:1fr}button,input,select,textarea{font-size:16px;min-height:48px}.btnRow button{flex:1 1 100%}.tabs{position:sticky;top:0;background:#f7fbfd;z-index:5;padding:8px 0}.tableWrap table{display:none}.mobileCards{display:block}.desktopOnly{display:none}.stat b{font-size:24px}.grid{gap:10px}.topbar{align-items:flex-start}.mobileTwo{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mobileTwo button{width:100%}}
 @media print{body{background:white}.noPrint,.tabs,.login,button,input[type=file]{display:none!important}.card{box-shadow:none;border:1px solid #999;break-inside:avoid}.wrap{max-width:none;padding:0}header{box-shadow:none;color:#000;background:white;border-bottom:2px solid #000}th{position:static;background:#eee}.mobileCards{display:none!important}.tableWrap table{display:table!important}}
 
@@ -44,7 +44,7 @@
   <div class="tabs noPrint"><button class="tab active" data-tab="dashboard" onclick="showTab('dashboard')">Genel Durum</button><button class="tab" data-tab="request" onclick="showTab('request')">İşyeri Talep Formu</button><button class="tab" data-tab="students" onclick="showTab('students')">Öğrenci Havuzu</button><button class="tab" data-tab="match" onclick="showTab('match')">Yönlendirme</button><button class="tab" data-tab="studentRequests" onclick="showTab('studentRequests')">Öğrenci Talepleri</button><button class="tab adminOnly" data-tab="admin" onclick="showTab('admin')">Yönetici</button><button class="tab" data-tab="reports" onclick="showTab('reports')">Raporlar</button></div>
   <section id="dashboard" class="tabPage card"><h2>Genel Durum</h2><div class="grid"><div class="col-3 stat"><b id="sReq">0</b>İşyeri Talebi</div><div class="col-3 stat"><b id="sQuota">0</b>Kontenjan</div><div class="col-3 stat"><b id="sStu">0</b>Öğrenci</div><div class="col-3 stat"><b id="sApply">0</b>Öğrenci Talebi</div></div><h3>Son İşyeri Talepleri</h3><div id="lastRequests" class="tableWrap"></div><div id="lastRequestCards" class="mobileCards"></div></section>
   <section id="request" class="tabPage card hidden"><h2>İşyeri Talep Formu</h2><div class="grid"><div class="col-6"><label>İş Yeri Ünvanı</label><input id="rTitle"></div><div class="col-3"><label>Yetkili</label><input id="rPerson"></div><div class="col-3"><label>Telefon</label><input id="rPhone" inputmode="tel"></div><div class="col-8"><label>Adres</label><input id="rAddress"></div><div class="col-4"><label>Faaliyet Alanı</label><select id="rSector"><option>Muhasebe Bürosu / SMMM</option><option>Ön Muhasebe</option><option>Finans / Banka</option><option>İnsan Kaynakları / Bordro</option><option>Dış Ticaret</option><option>Satış / Stok / Depo</option><option>Diğer</option></select></div><div class="col-3"><label>Kontenjan</label><input id="rQuota" type="number" min="1" value="1"></div><div class="col-3"><label>Çalışma Saatleri</label><input id="rHours" placeholder="09.00-17.00"></div><div class="col-3"><label>Ulaşım</label><select id="rTransport"><option>Ulaşımı kolay</option><option>Servis var</option><option>Ulaşım öğrenciye ait</option><option>Uzak bölge</option></select></div><div class="col-3"><label>Öğrenci Tercihi</label><select id="rGender"><option>Fark etmez</option><option>Kız öğrenci tercih edilir</option><option>Erkek öğrenci tercih edilir</option></select></div><div class="col-12"><label>Çalışma Günleri</label><div id="dayChecks" class="dayBox"></div></div><div class="col-12"><label>İstenen Öğrenci Özellikleri</label><div id="featureChecks" class="checkGrid"></div></div><div class="col-12"><label>Açıklama</label><textarea id="rNote"></textarea></div><div class="col-4"><label>Talebi Alan Koordinatör</label><input id="rTeacher" readonly></div><div class="col-8"><label>Koordinatörün Önerdiği Öğrenci</label><input id="rSuggested" list="studentNames"><datalist id="studentNames"></datalist></div><div class="col-12 floatingSave btnRow"><button onclick="saveRequest()">Talebi Kaydet</button><button class="btnLight" onclick="clearRequestForm()">Temizle</button></div></div></section>
-  <section id="students" class="tabPage card hidden"><h2>Öğrenci Havuzu</h2><div class="grid"><div class="col-3"><label>Ad Soyad</label><input id="sName"></div><div class="col-2"><label>Sınıf/Şube</label><input id="sClass" placeholder="11/A"></div><div class="col-3"><label>Telefon</label><input id="sPhone" inputmode="tel"></div><div class="col-4"><label>Adres/Bölge</label><input id="sAddress"></div><div class="col-12"><label>Öğrenci Özellikleri</label><div id="studentFeatureChecks" class="checkGrid"></div></div><div class="col-12"><label>Not</label><textarea id="sNote"></textarea></div><div class="col-12 btnRow"><button onclick="saveStudent()">Öğrenciyi Kaydet</button><button class="btnLight" onclick="clearStudentForm()">Temizle</button></div></div><h3>Kayıtlı Öğrenciler</h3><div id="studentTable" class="tableWrap"></div><div id="studentCards" class="mobileCards"></div></section>
+  <section id="students" class="tabPage card hidden"><h2>Öğrenci Havuzu</h2><div id="studentEditInfo" class="editInfo">Düzenleme modu: mevcut öğrenci kaydı güncellenecek.</div><input id="sEditId" type="hidden"><div class="grid"><div class="col-3"><label>Ad Soyad</label><input id="sName"></div><div class="col-2"><label>Sınıf/Şube</label><input id="sClass" placeholder="11/A"></div><div class="col-3"><label>Telefon</label><input id="sPhone" inputmode="tel"></div><div class="col-4"><label>Adres/Bölge</label><input id="sAddress"></div><div class="col-12"><label>Öğrenci Özellikleri</label><div id="studentFeatureChecks" class="checkGrid"></div></div><div class="col-12"><label>Not</label><textarea id="sNote"></textarea></div><div class="col-12 btnRow"><button id="studentSaveBtn" onclick="saveStudent()">Öğrenciyi Kaydet</button><button class="btnLight" onclick="clearStudentForm()">Temizle</button></div></div><h3>Kayıtlı Öğrenciler</h3><div id="studentTable" class="tableWrap"></div><div id="studentCards" class="mobileCards"></div></section>
   <section id="match" class="tabPage card hidden"><h2>Akıllı Yönlendirme</h2><div class="grid"><div class="col-6"><label>İşyeri seç: uygun öğrenciler</label><select id="matchRequest" onchange="renderMatch()"></select></div><div class="col-6"><label>Öğrenci seç: uygun işler</label><select id="matchStudent" onchange="renderMatch()"></select></div></div><div class="grid"><div class="col-6"><h3>İşyerine Uygun Öğrenciler</h3><div id="matchStudents"></div></div><div class="col-6"><h3>Öğrenciye Uygun İşler</h3><div id="matchWorks"></div></div></div></section>
   <section id="studentRequests" class="tabPage card hidden"><h2>Öğrenci Talep ve Görüşme Bildirimleri</h2><div id="applicationTable" class="tableWrap"></div><div id="applicationCards" class="mobileCards"></div></section>
   <section id="admin" class="tabPage card hidden"><h2>Yönetici Paneli</h2><div class="grid">
@@ -95,77 +95,90 @@ function setDiag(msg, cls='notice'){
   el.innerHTML = msg;
   el.className = cls;
 }
+function fetchWithAbort(url, opts={}, ms=7000){
+  const controller=new AbortController();
+  const t=setTimeout(()=>controller.abort(),ms);
+  return fetch(url,{...opts,signal:controller.signal}).finally(()=>clearTimeout(t));
+}
 async function testSupabaseConnection(silent=false){
   initSupabase();
+  const started=Date.now();
   const steps=[];
   const add=(ok,txt,detail='')=>steps.push(`<div>${ok?'✅':'❌'} <b>${esc(txt)}</b>${detail?`<br><span class="muted">${esc(detail)}</span>`:''}</div>`);
+  let failSafe=setTimeout(()=>{
+    setCloud(false);
+    setDiag('❌ <b>Test zaman aşımına uğradı.</b><br><span class="muted">İstek 10 saniyede sonuçlanmadı. İnternet, Vercel yayın adresi, Supabase URL/anon key veya tarayıcı ağ engelini kontrol ediniz.</span>','notice badbox');
+  },10500);
   try{
-    setDiag('⏳ Test ediliyor... Lütfen bekleyiniz.','notice');
+    setDiag('⏳ Test ediliyor... En fazla 10 saniye sürecek.','notice');
+    const url=(SUPABASE_URL||'').trim().replace(/\/+$/,'');
+    const key=(SUPABASE_ANON_KEY||'').trim();
     if(!window.supabase){
       setCloud(false);
-      add(false,'Supabase CDN yüklenemedi','Telefon/internet ağı jsdelivr CDN adresini engelliyor olabilir. Vercel üzerinde internet erişimini veya farklı ağı deneyin.');
+      add(false,'Supabase kütüphanesi yüklenemedi','CDN engeli olabilir. Vercel üzerinden deneyin veya internet ağını değiştirin.');
       setDiag(steps.join(''),'notice badbox');
-      if(!silent) alert('Supabase kütüphanesi yüklenemedi. İnternet/CDN engeli olabilir.');
       return false;
     }
     add(true,'Supabase kütüphanesi yüklendi');
-    if(!SUPABASE_URL || !SUPABASE_URL.startsWith('https://') || !SUPABASE_URL.includes('.supabase.co')){
-      setCloud(false); add(false,'SUPABASE_URL biçimi hatalı','URL https://xxxx.supabase.co şeklinde olmalı. Başında/sonunda boşluk olmamalı.');
+    if(!url || !url.startsWith('https://') || !url.includes('.supabase.co')){
+      setCloud(false); add(false,'SUPABASE_URL biçimi hatalı','URL https://xxxx.supabase.co şeklinde olmalı.');
       setDiag(steps.join(''),'notice badbox'); return false;
     }
     add(true,'SUPABASE_URL biçimi doğru');
-    if(!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.length<80){
-      setCloud(false); add(false,'SUPABASE_ANON_KEY eksik/kısa görünüyor','Project Settings > API bölümündeki anon/public key kullanılmalı.');
+    if(!key || key.length<80){
+      setCloud(false); add(false,'SUPABASE_ANON_KEY eksik/kısa görünüyor','Supabase Project Settings > API > anon/public key kullanılmalı.');
       setDiag(steps.join(''),'notice badbox'); return false;
     }
     add(true,'SUPABASE_ANON_KEY biçimi uygun');
-    DB = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const base=SUPABASE_URL.replace(/\/+$/,'');
-    let rest;
+    let resp;
     try{
-      rest = await withTimeout(fetch(base+'/rest/v1/',{method:'GET',headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}}),9000,'Supabase REST testi');
+      resp=await fetchWithAbort(url+'/rest/v1/teachers?select=id&limit=1',{
+        headers:{apikey:key,Authorization:'Bearer '+key,'Accept':'application/json'}
+      },7000);
     }catch(e){
-      setCloud(false); add(false,'Supabase sunucusuna ulaşılamadı',e.message||String(e));
-      setDiag(steps.join(''),'notice badbox'); if(!silent) alert('Supabase sunucusuna ulaşılamadı: '+(e.message||e)); return false;
+      setCloud(false);
+      add(false,'Supabase REST isteği sonuç vermedi',e.name==='AbortError'?'7 saniye zaman aşımı. URL/key doğruysa ağ veya CORS/CDN engeli olabilir.':(e.message||String(e)));
+      setDiag(steps.join(''),'notice badbox'); return false;
     }
-    if(!rest.ok){
-      let detail=''; try{detail=await rest.text()}catch(_){}
-      setCloud(false); add(false,'URL / ANON KEY doğrulanamadı','HTTP '+rest.status+' '+detail.slice(0,180));
-      setDiag(steps.join(''),'notice badbox'); if(!silent) alert('URL veya ANON KEY hatalı görünüyor. HTTP '+rest.status); return false;
+    const body=await resp.text().catch(()=>'');
+    if(resp.status===401 || resp.status===403){
+      setCloud(false); add(false,'URL / ANON KEY reddedildi','HTTP '+resp.status+' - anon key veya RLS/policy izinlerini kontrol edin.');
+      setDiag(steps.join(''),'notice badbox'); return false;
     }
-    add(true,'URL ve ANON KEY doğrulandı');
-    setCloud(true);
-    const tables=['teachers','students','workplace_requests','student_applications','portal_heartbeat'];
-    let missing=[],denied=[],other=[];
+    if(resp.status===404 || /does not exist|Could not find|schema cache/i.test(body)){
+      DB=supabase.createClient(url,key); setCloud(true);
+      add(true,'URL ve ANON KEY doğru');
+      add(false,'Tablolar eksik görünüyor','Yönetici panelindeki Supabase SQL kurulum kodunu çalıştırın.');
+      setDiag(steps.join(''),'notice'); return true;
+    }
+    if(!resp.ok){
+      setCloud(false); add(false,'Supabase yanıtı başarısız','HTTP '+resp.status+' '+body.slice(0,200));
+      setDiag(steps.join(''),'notice badbox'); return false;
+    }
+    DB=supabase.createClient(url,key); setCloud(true);
+    add(true,'URL / ANON KEY ve teachers tablosu erişilebilir');
+    const tables=['students','workplace_requests','student_applications','portal_heartbeat'];
     for(const table of tables){
       try{
-        const r = await withTimeout(DB.from(table).select('*').limit(1),7000,table+' tablo testi');
-        if(r.error){
-          const msg=r.error.message||''; const code=r.error.code||'';
-          if(code==='42P01' || /does not exist|schema cache/i.test(msg)) missing.push(table);
-          else if(code==='42501' || /permission|policy|RLS|row-level/i.test(msg)) denied.push(table);
-          else other.push(table+': '+msg);
-        }else add(true,table+' tablosu erişilebilir');
-      }catch(e){ other.push(table+': '+(e.message||e)); }
+        const r=await fetchWithAbort(url+`/rest/v1/${table}?select=id&limit=1`,{headers:{apikey:key,Authorization:'Bearer '+key,'Accept':'application/json'}},5000);
+        const txt=await r.text().catch(()=>'');
+        if(r.ok) add(true,table+' tablosu erişilebilir');
+        else if(r.status===404 || /does not exist|Could not find|schema cache/i.test(txt)) add(false,table+' tablosu eksik','SQL kurulum kodunu çalıştırın.');
+        else if(r.status===401 || r.status===403) add(false,table+' izin/policy sorunu','HTTP '+r.status);
+        else add(false,table+' tablo uyarısı','HTTP '+r.status+' '+txt.slice(0,120));
+      }catch(e){add(false,table+' tablo testi zaman aşımı',e.name==='AbortError'?'5 saniye içinde yanıt alınamadı.':(e.message||String(e)));}
     }
-    if(missing.length) add(false,'Eksik tablolar',missing.join(', '));
-    if(denied.length) add(false,'Policy/RLS izin sorunu',denied.join(', '));
-    if(other.length) add(false,'Diğer tablo test uyarıları',other.join(' | '));
-    if(!missing.length && !denied.length && !other.length){
-      add(true,'Supabase bağlantısı tam başarılı');
-      setDiag(steps.join(''),'notice okbox');
-      await heartbeat();
-      return true;
-    }
-    setDiag(steps.join(''),'notice');
-    if(!silent) alert('Supabase URL/key doğru; ancak SQL tablo/policy tarafında eksik var. Yönetici panelindeki SQL kodunu çalıştırın.');
+    add(true,'Test tamamlandı',Math.round((Date.now()-started)/1000)+' sn');
+    setDiag(steps.join(''),'notice okbox');
+    heartbeat();
     return true;
   }catch(e){
     setCloud(false);
     add(false,'Beklenmeyen test hatası',e.message||String(e));
     setDiag(steps.join(''),'notice badbox');
-    if(!silent) alert('Bağlantı testi hatası: '+(e.message||e));
     return false;
+  }finally{
+    clearTimeout(failSafe);
   }
 }
 
@@ -217,7 +230,7 @@ function refreshKeepAliveStatus(){let last=localStorage.getItem('isYeriPortalLas
 function downloadCronReadme(){let txt=`VERCEL CRON KURULUM NOTU\n\n1) Bu HTML dosyasını GitHub projenize index.html olarak yükleyin.\n2) Projenizde api/keepalive.js dosyası oluşturun.\n3) Projenizde vercel.json dosyası oluşturun.\n4) Vercel > Project Settings > Environment Variables bölümüne şunları ekleyin:\n   SUPABASE_URL = Supabase proje URL\n   SUPABASE_ANON_KEY = Supabase anon/public key\n   CRON_SECRET = okulunuzun belirlediği gizli bir metin (isteğe bağlı ama önerilir)\n\napi/keepalive.js içeriği:\n${VERCEL_KEEPALIVE_JS}\n\nvercel.json içeriği:\n${VERCEL_JSON}\n\nNot: Supabase portal_heartbeat tablosunda insert/update izni açık olmalıdır. Bu portalın SQL kurulum kodu bu izni verir.`; download(new Blob([txt],{type:'text/plain;charset=utf-8'}),'vercel_cron_keepalive_kurulum_notu.txt');}
 const VERCEL_KEEPALIVE_JS=`export default async function handler(req, res) {\n  const url = process.env.SUPABASE_URL;\n  const key = process.env.SUPABASE_ANON_KEY;\n  const secret = process.env.CRON_SECRET;\n  if (secret && req.headers.authorization !== 'Bearer ' + secret) {\n    return res.status(401).json({ ok:false, error:'unauthorized' });\n  }\n  if (!url || !key) return res.status(500).json({ ok:false, error:'missing env' });\n  const r = await fetch(url + '/rest/v1/portal_heartbeat', {\n    method:'POST',\n    headers:{\n      apikey:key,\n      Authorization:'Bearer ' + key,\n      'Content-Type':'application/json',\n      Prefer:'resolution=merge-duplicates,return=representation'\n    },\n    body: JSON.stringify({ id:'vercel_cron_keepalive', note:'Vercel Cron otomatik heartbeat', updated_at:new Date().toISOString() })\n  });\n  const body = await r.text();\n  res.status(r.ok ? 200 : 500).send(body);\n}`;
 const VERCEL_JSON=`{\n  "crons": [\n    { "path": "/api/keepalive", "schedule": "0 6 * * *" }\n  ]\n}`;
-function init(){ensureAdmin();renderChecks('featureChecks',FEATURES);renderChecks('studentFeatureChecks',FEATURES);renderChecks('dayChecks',DAYS);document.getElementById('sqlCode').textContent=SQL;fillSupabaseSettings();refreshKeepAliveStatus();loadAll();let el=document.getElementById('sbTestResult'); if(SUPABASE_URL&&SUPABASE_ANON_KEY&&el){el.textContent='Test ediliyor...'; testSupabaseConnection(true);} else if(el){el.textContent='Supabase ayarı girilmedi';} setInterval(heartbeat,1000*60*30)}
+function init(){ensureAdmin();renderChecks('featureChecks',FEATURES);renderChecks('studentFeatureChecks',FEATURES);renderChecks('dayChecks',DAYS);document.getElementById('sqlCode').textContent=SQL;fillSupabaseSettings();refreshKeepAliveStatus();loadAll();let el=document.getElementById('sbTestResult'); if(el){el.textContent=SUPABASE_URL&&SUPABASE_ANON_KEY?'Ayarlar kayıtlı. Bağlantıyı test etmek için Test Et düğmesine basınız.':'Supabase ayarı girilmedi'; el.className='notice';} setInterval(heartbeat,1000*60*30)}
 function getSafeUsers(){
   ensureAdmin();
   const teachers=(data.teachers||[]).filter(t=>t && t.name && t.role!=='admin');
@@ -263,9 +276,22 @@ async function studentApply(rid,type){let get=x=>document.getElementById(x+'_'+r
 function renderDashboard(){document.getElementById('sReq').textContent=data.requests.length;document.getElementById('sQuota').textContent=data.requests.reduce((a,b)=>a+(+b.quota||0),0);document.getElementById('sStu').textContent=data.students.length;document.getElementById('sApply').textContent=data.applications.length;let rows=data.requests.slice(0,8);document.getElementById('lastRequests').innerHTML=`<table><tr><th>İşyeri</th><th>Özellik</th><th>Koordinatör</th></tr>${rows.map(r=>`<tr><td><b>${esc(r.title)}</b><br>${esc(r.address)}</td><td>${renderPills(r.features)}</td><td>${esc(r.teacher||'')}</td></tr>`).join('')}</table>`;document.getElementById('lastRequestCards').innerHTML=rows.map(r=>`<div class="reqCard"><b>${esc(r.title)}</b><div>${renderPills(r.features)}</div><span class="muted">${esc(r.teacher||'')}</span></div>`).join('')}
 async function saveRequest(){let obj={id:uid(),title:rTitle.value.trim(),person:rPerson.value.trim(),phone:rPhone.value.trim(),address:rAddress.value.trim(),sector:rSector.value,quota:+rQuota.value||1,hours:rHours.value.trim(),transport:rTransport.value,gender:rGender.value,days:checked('dayChecks'),features:checked('featureChecks'),note:rNote.value.trim(),teacher:rTeacher.value||currentUser?.name||'',suggested:rSuggested.value.trim(),createdAt:new Date().toISOString()};if(!obj.title)return alert('İşyeri ünvanı zorunlu.');data.requests.unshift(obj);await upsert('workplace_requests',{id:obj.id,title:obj.title,person:obj.person,phone:obj.phone,address:obj.address,sector:obj.sector,quota:obj.quota,hours:obj.hours,transport:obj.transport,gender:obj.gender,days:obj.days,features:obj.features,note:obj.note,teacher:obj.teacher,suggested:obj.suggested});clearRequestForm();renderAll();alert('İşyeri talebi kaydedildi.')}
 function clearRequestForm(){['rTitle','rPerson','rPhone','rAddress','rHours','rNote','rSuggested'].forEach(id=>document.getElementById(id).value='');document.querySelectorAll('#dayChecks input,#featureChecks input').forEach(x=>x.checked=false);rQuota.value=1;if(currentUser)rTeacher.value=currentUser.name}
-async function saveStudent(){let obj={id:uid(),name:sName.value.trim(),class:sClass.value.trim(),phone:sPhone.value.trim(),address:sAddress.value.trim(),features:checked('studentFeatureChecks'),note:sNote.value.trim()};if(!obj.name)return alert('Öğrenci adı zorunlu.');data.students.push(obj);await upsert('students',{id:obj.id,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note});clearStudentForm();renderAll()}
-function clearStudentForm(){['sName','sClass','sPhone','sAddress','sNote'].forEach(id=>document.getElementById(id).value='');document.querySelectorAll('#studentFeatureChecks input').forEach(x=>x.checked=false)}
-function renderStudents(){let rows=data.students;document.getElementById('studentTable').innerHTML=`<table><tr><th>Öğrenci</th><th>İletişim</th><th>Özellikler</th><th>İşlem</th></tr>${rows.map(s=>`<tr><td><b>${esc(s.name)}</b><br>${esc(s.class)}</td><td>${esc(s.phone)}<br>${esc(s.address)}</td><td>${renderPills(s.features)}<br><span class="muted">${esc(s.note||'')}</span></td><td><button class="btnBad" onclick="removeStudent('${s.id}')">Sil</button></td></tr>`).join('')}</table>`;document.getElementById('studentCards').innerHTML=rows.map(s=>`<div class="stuCard"><b>${esc(s.name)}</b> ${esc(s.class)}<div>${renderPills(s.features)}</div><button class="btnBad" onclick="removeStudent('${s.id}')">Sil</button></div>`).join('')}
+async function saveStudent(){
+  let editId=document.getElementById('sEditId')?.value||'';
+  let obj={id:editId||uid(),name:sName.value.trim(),class:sClass.value.trim(),phone:sPhone.value.trim(),address:sAddress.value.trim(),features:checked('studentFeatureChecks'),note:sNote.value.trim()};
+  if(!obj.name)return alert('Öğrenci adı zorunlu.');
+  let idx=data.students.findIndex(x=>x.id===obj.id);
+  if(idx>=0) data.students[idx]=obj; else data.students.push(obj);
+  await upsert('students',{id:obj.id,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note});
+  clearStudentForm();renderAll();
+  alert(idx>=0?'Öğrenci bilgileri güncellendi.':'Öğrenci kaydedildi.');
+}
+function clearStudentForm(){['sName','sClass','sPhone','sAddress','sNote'].forEach(id=>document.getElementById(id).value='');document.querySelectorAll('#studentFeatureChecks input').forEach(x=>x.checked=false);let e=document.getElementById('sEditId');if(e)e.value='';let b=document.getElementById('studentSaveBtn');if(b)b.textContent='Öğrenciyi Kaydet';let info=document.getElementById('studentEditInfo');if(info)info.classList.remove('show')}
+function sortStudents(key){if(studentSort.key===key)studentSort.dir*=-1;else{studentSort.key=key;studentSort.dir=1;}renderStudents()}
+function getStudentSortVal(s,key){if(key==='features')return arr(s.features).join(', ');return String(s[key]||'').toLocaleLowerCase('tr-TR')}
+function sortedStudents(){return [...data.students].sort((a,b)=>getStudentSortVal(a,studentSort.key).localeCompare(getStudentSortVal(b,studentSort.key),'tr')*studentSort.dir)}
+function editStudent(id){let s=data.students.find(x=>x.id===id);if(!s)return;showTab('students');sEditId.value=s.id;sName.value=s.name||'';sClass.value=s.class||'';sPhone.value=s.phone||'';sAddress.value=s.address||'';sNote.value=s.note||'';document.querySelectorAll('#studentFeatureChecks input').forEach(x=>x.checked=arr(s.features).includes(x.value));let b=document.getElementById('studentSaveBtn');if(b)b.textContent='Öğrenciyi Güncelle';let info=document.getElementById('studentEditInfo');if(info){info.textContent='Düzenleme modu: '+(s.name||'')+' kaydı güncellenecek.';info.classList.add('show')}window.scrollTo({top:document.getElementById('students').offsetTop-8,behavior:'smooth'})}
+function renderStudents(){let rows=sortedStudents();let arrow=k=>studentSort.key===k?(studentSort.dir>0?' ▲':' ▼'):'';document.getElementById('studentTable').innerHTML=`<table><tr><th class="sortable" onclick="sortStudents('name')">Öğrenci${arrow('name')}</th><th class="sortable" onclick="sortStudents('class')">Sınıf${arrow('class')}</th><th class="sortable" onclick="sortStudents('phone')">Telefon${arrow('phone')}</th><th class="sortable" onclick="sortStudents('address')">Adres/Bölge${arrow('address')}</th><th class="sortable" onclick="sortStudents('features')">Özellikler${arrow('features')}</th><th>İşlem</th></tr>${rows.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.class)}</td><td>${esc(s.phone)}</td><td>${esc(s.address)}</td><td>${renderPills(s.features)}<br><span class="muted">${esc(s.note||'')}</span></td><td><div class="btnRow"><button class="btnLight" onclick="editStudent('${s.id}')">Düzenle</button><button class="btnBad" onclick="removeStudent('${s.id}')">Sil</button></div></td></tr>`).join('')}</table>`;document.getElementById('studentCards').innerHTML=rows.map(s=>`<div class="stuCard"><b>${esc(s.name)}</b> ${esc(s.class)}<div class="muted">${esc(s.phone)} ${esc(s.address)}</div><div>${renderPills(s.features)}</div><div class="btnRow" style="margin-top:8px"><button class="btnLight" onclick="editStudent('${s.id}')">Düzenle</button><button class="btnBad" onclick="removeStudent('${s.id}')">Sil</button></div></div>`).join('')}
 async function removeStudent(id){if(!confirm('Öğrenci silinsin mi?'))return;data.students=data.students.filter(x=>x.id!==id);await del('students',id)}
 function score(a,b){a=arr(a);b=arr(b);if(!a.length)return 0;let m=a.filter(x=>b.includes(x));return Math.round(m.length/a.length*100)}
 function renderMatchSelectors(){matchRequest.innerHTML=data.requests.map(r=>`<option value="${r.id}">${esc(r.title)}</option>`).join('');matchStudent.innerHTML=data.students.map(s=>`<option value="${s.id}">${esc(s.name)} - ${esc(s.class)}</option>`).join('');renderMatch()}
@@ -273,6 +299,7 @@ function renderMatch(){let r=data.requests.find(x=>x.id===matchRequest.value)||d
 function renderApplications(){let html=`<table><tr><th>Öğrenci</th><th>İşyeri</th><th>Talep</th><th>Not</th><th>Durum</th></tr>${data.applications.map(a=>{let r=data.requests.find(x=>x.id===a.requestId)||{};return `<tr><td><b>${esc(a.studentName)}</b><br>${esc(a.studentClass)}<br>${esc(a.phone)}</td><td>${esc(r.title||'')}</td><td>${esc(a.type)}</td><td>${esc(a.note||'')}</td><td>${esc(a.status||'Yeni')}</td></tr>`}).join('')}</table>`;document.getElementById('applicationTable').innerHTML=html;document.getElementById('applicationCards').innerHTML=data.applications.map(a=>{let r=data.requests.find(x=>x.id===a.requestId)||{};return `<div class="reqCard"><b>${esc(a.studentName)}</b><div>${esc(a.type)} - ${esc(r.title||'')}</div><p class="muted">${esc(a.note||'')}</p></div>`}).join('')}
 function renderReports(){document.getElementById('reportRequests').innerHTML=document.getElementById('lastRequests').innerHTML;document.getElementById('reportApps').innerHTML=document.getElementById('applicationTable').innerHTML}
 let pendingTeachers=[], pendingStudents=[];
+let studentSort={key:'name',dir:1};
 function yes(v){return ['evet','e','1','true','var','✓','x','aktif'].includes(String(v||'').trim().toLowerCase())}
 function val(r,keys){for(const k of keys){if(r[k]!==undefined && String(r[k]).trim()!=='')return String(r[k]).trim()}return ''}
 function normalizeTeacherRows(rows){let list=rows.map(r=>({id:uid(),name:val(r,['Ad Soyad','ad soyad','Öğretmen','Ogretmen','Öğretmen Adı','Ogretmen Adi']),pass:val(r,['Şifre','Sifre','Parola','Password'])||String(1000+(Math.floor(Math.random()*8999))),role:'teacher',active:val(r,['Aktif'])||'Evet'})).filter(x=>x.name);let admin=data.teachers.find(t=>t.role==='admin')||{id:'admin',name:'Yönetici',pass:'18309',role:'admin'};list=list.filter(t=>t.name.toLowerCase()!=='yönetici' && t.name.toLowerCase()!=='yonetici');list.push(admin);return list}
@@ -290,7 +317,7 @@ function exportJSON(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'app
 function importJSON(ev){let f=ev.target.files[0];let fr=new FileReader();fr.onload=e=>{data=JSON.parse(e.target.result);saveLocal();renderAll()};fr.readAsText(f)}
 function exportCSV(key){let rows=data[key]||[];let csv=[Object.keys(rows[0]||{}).join(';'),...rows.map(r=>Object.values(r).map(v=>'"'+String(Array.isArray(v)?v.join(', '):v??'').replaceAll('"','""')+'"').join(';'))].join('\n');download(new Blob([csv],{type:'text/csv;charset=utf-8'}),key+'.csv')}
 function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
-const SQL=`-- v8.5 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
+const SQL=`-- v8.8 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
 -- Bu kodu SQL Editor içinde birden fazla kez çalıştırabilirsiniz.
 
 create table if not exists teachers (
