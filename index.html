@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.3 Giriş Sabit</title>
+<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V8.6 Supabase Test Düzeltildi</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -83,9 +83,64 @@ function fillSupabaseSettings(){let u=document.getElementById('sbUrl'),k=documen
 function toggleKey(){let k=document.getElementById('sbKey'); if(!k)return; k.type=k.type==='password'?'text':'password';}
 async function saveSupabaseSettings(){let u=document.getElementById('sbUrl').value.trim();let k=document.getElementById('sbKey').value.trim(); if(!u||!k)return alert('SUPABASE_URL ve SUPABASE_ANON_KEY alanlarını doldurun.'); localStorage.setItem('isyeriPortalSupabaseUrl',u); localStorage.setItem('isyeriPortalSupabaseAnonKey',k); initSupabase(); fillSupabaseSettings(); await testSupabaseConnection(true); await loadAll(); alert('Supabase ayarları kaydedildi.');}
 function clearSupabaseSettings(){if(!confirm('Supabase ayarları bu cihazdan temizlensin mi?'))return; localStorage.removeItem('isyeriPortalSupabaseUrl'); localStorage.removeItem('isyeriPortalSupabaseAnonKey'); initSupabase(); fillSupabaseSettings(); setCloud(false); let el=document.getElementById('sbTestResult'); if(el)el.textContent='Ayarlar temizlendi';}
-async function testSupabaseConnection(silent=false){let el=document.getElementById('sbTestResult'); initSupabase(); if(!DB){setCloud(false); if(el)el.textContent='Eksik veya hatalı ayar'; if(!silent)alert('Supabase ayarları eksik veya hatalı görünüyor.'); return false;} try{let r=await DB.from('portal_heartbeat').select('id').limit(1); if(r.error)throw r.error; setCloud(true); if(el)el.textContent='✅ Bağlantı başarılı'; await heartbeat(); return true;}catch(e){setCloud(false); if(el)el.textContent='❌ '+(e.message||'Bağlantı hatası'); if(!silent)alert('Bağlantı hatası: '+(e.message||e)); return false;}}
+async function testSupabaseConnection(silent=false){
+  let el=document.getElementById('sbTestResult');
+  initSupabase();
+  if(!DB){
+    setCloud(false);
+    if(el)el.textContent='Eksik veya hatalı ayar';
+    if(!silent)alert('Supabase ayarları eksik veya hatalı görünüyor. URL https://...supabase.co şeklinde, key ise anon/public key olmalıdır.');
+    return false;
+  }
+  try{
+    // v8.5: Önce Supabase REST uç noktası test edilir. Böylece tablo/policy eksikliği bağlantı hatası gibi görünmez.
+    const base=SUPABASE_URL.replace(/\/+$/,'');
+    const rest=await fetch(base+'/rest/v1/',{method:'GET',headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY}});
+    if(!rest.ok){let detail='';try{detail=await rest.text()}catch(_){};throw new Error('URL / ANON KEY doğrulanamadı. HTTP '+rest.status+(detail?(' - '+detail.slice(0,160)):''));}
+    setCloud(true);
+    let missing=[],denied=[];
+    const tables=['teachers','students','workplace_requests','student_applications','portal_heartbeat'];
+    for(const table of tables){
+      const r=await DB.from(table).select('*').limit(1);
+      if(r.error){
+        if((r.error.code||'')==='42P01' || /does not exist|schema cache/i.test(r.error.message||'')) missing.push(table);
+        else if((r.error.code||'')==='42501' || /permission|policy|RLS|row-level/i.test(r.error.message||'')) denied.push(table);
+      }
+    }
+    if(el) el.textContent=(missing.length||denied.length)?'✅ Supabase bağlı; SQL/policy kontrolü gerekli':'✅ Supabase bağlantısı başarılı';
+    if(!silent && (missing.length||denied.length)) alert('Supabase bağlantısı doğru. Ancak bazı tablolar veya izinler eksik görünüyor.\n\nEksik tablo: '+(missing.join(', ')||'-')+'\nİzin/RLS kontrolü: '+(denied.join(', ')||'-')+'\n\nYönetici panelindeki v8.6 SQL kodunu Supabase SQL Editor içinde çalıştırınız. Bu SQL tekrar çalıştırılabilir şekilde düzenlendi.');
+    await heartbeat();
+    return true;
+  }catch(e){
+    setCloud(false);
+    if(el)el.textContent='❌ '+(e.message||'Bağlantı hatası');
+    if(!silent)alert('Bağlantı testi başarısız: '+(e.message||e)+'\n\nBilgiler doğruysa URL sonunda boşluk olmadığını, anon/public key kullandığınızı ve Vercel/telefon internet erişimini kontrol ediniz.');
+    return false;
+  }
+}
 
-async function loadAll(){if(DB){try{let [t,s,r,a]=await Promise.all([DB.from('teachers').select('*').order('name'),DB.from('students').select('*').order('name'),DB.from('workplace_requests').select('*').order('created_at',{ascending:false}),DB.from('student_applications').select('*').order('created_at',{ascending:false})]);if(!t.error&&t.data?.length)data.teachers=t.data.map(x=>({id:x.id,name:x.name,pass:x.password,role:x.role||'teacher'})); ensureAdmin();if(!s.error)data.students=s.data.map(x=>({id:x.id,name:x.name,class:x.class_name||'',phone:x.phone||'',address:x.address||'',features:arr(x.features),note:x.note||''}));if(!r.error)data.requests=r.data.map(x=>({id:x.id,title:x.title,person:x.person,phone:x.phone,address:x.address,sector:x.sector,quota:x.quota,hours:x.hours,transport:x.transport,gender:x.gender,days:arr(x.days),features:arr(x.features),note:x.note,teacher:x.teacher,suggested:x.suggested,createdAt:x.created_at}));if(!a.error)data.applications=a.data.map(x=>({id:x.id,requestId:x.request_id,studentName:x.student_name,studentClass:x.student_class,phone:x.phone,type:x.type,note:x.note,status:x.status,createdAt:x.created_at}));setCloud(true);await heartbeat()}catch(e){setCloud(false);loadLocal()}}else{setCloud(false);loadLocal()} saveLocal(); renderAll()}
+async function loadAll(){
+  if(DB){
+    try{
+      const safe=async (q)=>{try{return await q()}catch(e){return {error:e,data:null}}};
+      let [t,sr,r,a]=await Promise.all([
+        safe(()=>DB.from('teachers').select('*').order('name')),
+        safe(()=>DB.from('students').select('*').order('name')),
+        safe(()=>DB.from('workplace_requests').select('*').order('created_at',{ascending:false})),
+        safe(()=>DB.from('student_applications').select('*').order('created_at',{ascending:false}))
+      ]);
+      let anyOk=false;
+      if(!t.error&&t.data?.length){data.teachers=t.data.map(x=>({id:x.id,name:x.name,pass:x.password,role:x.role||'teacher'})); anyOk=true;}
+      ensureAdmin();
+      if(!sr.error&&sr.data){data.students=sr.data.map(x=>({id:x.id,name:x.name,class:x.class_name||'',phone:x.phone||'',address:x.address||'',features:arr(x.features),note:x.note||''})); anyOk=true;}
+      if(!r.error&&r.data){data.requests=r.data.map(x=>({id:x.id,title:x.title,person:x.person,phone:x.phone,address:x.address,sector:x.sector,quota:x.quota,hours:x.hours,transport:x.transport,gender:x.gender,days:arr(x.days),features:arr(x.features),note:x.note,teacher:x.teacher,suggested:x.suggested,createdAt:x.created_at})); anyOk=true;}
+      if(!a.error&&a.data){data.applications=a.data.map(x=>({id:x.id,requestId:x.request_id,studentName:x.student_name,studentClass:x.student_class,phone:x.phone,type:x.type,note:x.note,status:x.status,createdAt:x.created_at})); anyOk=true;}
+      setCloud(anyOk || !!DB);
+      await heartbeat();
+    }catch(e){setCloud(false);loadLocal()}
+  }else{setCloud(false);loadLocal()}
+  saveLocal(); renderAll();
+}
 function ensureAdmin(){
   if(!Array.isArray(data.teachers)) data.teachers=[];
   data.teachers=data.teachers.filter(t=>t&&t.name);
@@ -97,13 +152,22 @@ function loadLocal(){try{let old=JSON.parse(localStorage.getItem('isyeriPortalV6
 function saveLocal(){localStorage.setItem('isyeriPortalV6',JSON.stringify(data))}
 async function upsert(table,obj){saveLocal(); if(!DB)return; let {error}=await DB.from(table).upsert(obj); if(error) alert('Supabase kayıt hatası: '+error.message)}
 async function del(table,id){if(DB)await DB.from(table).delete().eq('id',id);saveLocal();renderAll()}
-async function heartbeat(){if(!DB)return false; let now=new Date().toISOString(); let obj={id:'portal_keepalive',note:'Portal/istemci heartbeat - ücretsiz planda pasifleşmeye karşı canlı tutma',updated_at:now}; let r=await DB.from('portal_heartbeat').upsert(obj); if(!r.error){localStorage.setItem('isYeriPortalLastHeartbeat',now); refreshKeepAliveStatus(); return true;} return false;}
+async function heartbeat(){
+  if(!DB)return false;
+  try{
+    let now=new Date().toISOString();
+    let obj={id:'portal_keepalive',note:'Portal/istemci heartbeat - ücretsiz planda pasifleşmeye karşı canlı tutma',updated_at:now};
+    let r=await DB.from('portal_heartbeat').upsert(obj);
+    if(!r.error){localStorage.setItem('isYeriPortalLastHeartbeat',now); refreshKeepAliveStatus(); return true;}
+  }catch(e){}
+  return false;
+}
 async function manualHeartbeat(){let ok=await heartbeat(); alert(ok?'Test ping başarıyla gönderildi.':'Ping gönderilemedi. Supabase ayarlarını ve tablo izinlerini kontrol ediniz.');}
 function refreshKeepAliveStatus(){let last=localStorage.getItem('isYeriPortalLastHeartbeat')||''; let el1=document.getElementById('kaLocalStatus'), el2=document.getElementById('kaLastTime'), el3=document.getElementById('kaAdvice'); if(!el1||!el2||!el3)return; if(!last){el1.textContent='Yok'; el2.textContent='-'; el3.textContent='Cron kur'; return;} let d=new Date(last); let diff=(Date.now()-d.getTime())/86400000; el1.textContent=diff<2?'Aktif':'Eski'; el2.textContent=d.toLocaleString('tr-TR'); el3.textContent=diff<2?'İyi':(diff<7?'Yenile':'Riskli');}
-function downloadCronReadme(){let txt=`VERCEL CRON KURULUM NOTU\n\n1) Bu HTML dosyasını GitHub projenize index.html olarak yükleyin.\n2) Projenizde api/keepalive.js dosyası oluşturun.\n3) Projenizde vercel.json dosyası oluşturun.\n4) Vercel > Project Settings > Environment Variables bölümüne şunları ekleyin:\n   SUPABASE_URL = Supabase proje URL\n   SUPABASE_ANON_KEY = Supabase anon/public key\n   CRON_SECRET = okulunuzun belirlediği gizli bir metin (isteğe bağlı ama önerilir)\n\napi/keepalive.js içeriği:\n${VERCEL_KEEPALIVE_JS}\n\nvercel.json içeriği:\n${VERCEL_JSON}\n\nNot: Supabase portal_heartbeat tablosunda insert/update izni açık olmalıdır. Bu portalın SQL kurulum kodu bu izni verir.`; downloadBlob(txt,'vercel_cron_keepalive_kurulum_notu.txt','text/plain');}
+function downloadCronReadme(){let txt=`VERCEL CRON KURULUM NOTU\n\n1) Bu HTML dosyasını GitHub projenize index.html olarak yükleyin.\n2) Projenizde api/keepalive.js dosyası oluşturun.\n3) Projenizde vercel.json dosyası oluşturun.\n4) Vercel > Project Settings > Environment Variables bölümüne şunları ekleyin:\n   SUPABASE_URL = Supabase proje URL\n   SUPABASE_ANON_KEY = Supabase anon/public key\n   CRON_SECRET = okulunuzun belirlediği gizli bir metin (isteğe bağlı ama önerilir)\n\napi/keepalive.js içeriği:\n${VERCEL_KEEPALIVE_JS}\n\nvercel.json içeriği:\n${VERCEL_JSON}\n\nNot: Supabase portal_heartbeat tablosunda insert/update izni açık olmalıdır. Bu portalın SQL kurulum kodu bu izni verir.`; download(new Blob([txt],{type:'text/plain;charset=utf-8'}),'vercel_cron_keepalive_kurulum_notu.txt');}
 const VERCEL_KEEPALIVE_JS=`export default async function handler(req, res) {\n  const url = process.env.SUPABASE_URL;\n  const key = process.env.SUPABASE_ANON_KEY;\n  const secret = process.env.CRON_SECRET;\n  if (secret && req.headers.authorization !== 'Bearer ' + secret) {\n    return res.status(401).json({ ok:false, error:'unauthorized' });\n  }\n  if (!url || !key) return res.status(500).json({ ok:false, error:'missing env' });\n  const r = await fetch(url + '/rest/v1/portal_heartbeat', {\n    method:'POST',\n    headers:{\n      apikey:key,\n      Authorization:'Bearer ' + key,\n      'Content-Type':'application/json',\n      Prefer:'resolution=merge-duplicates,return=representation'\n    },\n    body: JSON.stringify({ id:'vercel_cron_keepalive', note:'Vercel Cron otomatik heartbeat', updated_at:new Date().toISOString() })\n  });\n  const body = await r.text();\n  res.status(r.ok ? 200 : 500).send(body);\n}`;
 const VERCEL_JSON=`{\n  "crons": [\n    { "path": "/api/keepalive", "schedule": "0 6 * * *" }\n  ]\n}`;
-function init(){ensureAdmin();renderChecks('featureChecks',FEATURES);renderChecks('studentFeatureChecks',FEATURES);renderChecks('dayChecks',DAYS);document.getElementById('sqlCode').textContent=SQL;fillSupabaseSettings();refreshKeepAliveStatus();loadAll();setInterval(heartbeat,1000*60*30)}
+function init(){ensureAdmin();renderChecks('featureChecks',FEATURES);renderChecks('studentFeatureChecks',FEATURES);renderChecks('dayChecks',DAYS);document.getElementById('sqlCode').textContent=SQL;fillSupabaseSettings();refreshKeepAliveStatus();loadAll();let el=document.getElementById('sbTestResult'); if(SUPABASE_URL&&SUPABASE_ANON_KEY&&el){el.textContent='Test ediliyor...'; testSupabaseConnection(true);} else if(el){el.textContent='Supabase ayarı girilmedi';} setInterval(heartbeat,1000*60*30)}
 function getSafeUsers(){
   ensureAdmin();
   const teachers=(data.teachers||[]).filter(t=>t && t.name && t.role!=='admin');
@@ -176,18 +240,87 @@ function exportJSON(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'app
 function importJSON(ev){let f=ev.target.files[0];let fr=new FileReader();fr.onload=e=>{data=JSON.parse(e.target.result);saveLocal();renderAll()};fr.readAsText(f)}
 function exportCSV(key){let rows=data[key]||[];let csv=[Object.keys(rows[0]||{}).join(';'),...rows.map(r=>Object.values(r).map(v=>'"'+String(Array.isArray(v)?v.join(', '):v??'').replaceAll('"','""')+'"').join(';'))].join('\n');download(new Blob([csv],{type:'text/csv;charset=utf-8'}),key+'.csv')}
 function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
-const SQL=`create table if not exists teachers (id text primary key, name text not null, password text not null, role text not null default 'teacher', created_at timestamptz default now());
-create table if not exists students (id text primary key, name text not null, class_name text, phone text, address text, features jsonb default '[]'::jsonb, note text, created_at timestamptz default now());
-create table if not exists workplace_requests (id text primary key, title text not null, person text, phone text, address text, sector text, quota int default 1, hours text, transport text, gender text, days jsonb default '[]'::jsonb, features jsonb default '[]'::jsonb, note text, teacher text, suggested text, created_at timestamptz default now());
-create table if not exists student_applications (id text primary key, request_id text, student_name text not null, student_class text, phone text, type text, note text, status text default 'Yeni', created_at timestamptz default now());
-create table if not exists portal_heartbeat (id text primary key, note text, updated_at timestamptz default now());
-alter table teachers enable row level security; alter table students enable row level security; alter table workplace_requests enable row level security; alter table student_applications enable row level security; alter table portal_heartbeat enable row level security;
-create policy "public teachers" on teachers for all using (true) with check (true);
-create policy "public students" on students for all using (true) with check (true);
-create policy "public workplace" on workplace_requests for all using (true) with check (true);
-create policy "public applications" on student_applications for all using (true) with check (true);
-create policy "public heartbeat" on portal_heartbeat for all using (true) with check (true);
-insert into teachers(id,name,password,role) values ('admin','Yönetici','18309','admin') on conflict (id) do nothing;`;
+const SQL=`-- v8.5 TEKRAR ÇALIŞTIRILABİLİR SUPABASE KURULUM KODU
+-- Bu kodu SQL Editor içinde birden fazla kez çalıştırabilirsiniz.
+
+create table if not exists teachers (
+  id text primary key,
+  name text not null,
+  password text not null,
+  role text not null default 'teacher',
+  created_at timestamptz default now()
+);
+
+create table if not exists students (
+  id text primary key,
+  name text not null,
+  class_name text,
+  phone text,
+  address text,
+  features jsonb default '[]'::jsonb,
+  note text,
+  created_at timestamptz default now()
+);
+
+create table if not exists workplace_requests (
+  id text primary key,
+  title text not null,
+  person text,
+  phone text,
+  address text,
+  sector text,
+  quota int default 1,
+  hours text,
+  transport text,
+  gender text,
+  days jsonb default '[]'::jsonb,
+  features jsonb default '[]'::jsonb,
+  note text,
+  teacher text,
+  suggested text,
+  created_at timestamptz default now()
+);
+
+create table if not exists student_applications (
+  id text primary key,
+  request_id text,
+  student_name text not null,
+  student_class text,
+  phone text,
+  type text,
+  note text,
+  status text default 'Yeni',
+  created_at timestamptz default now()
+);
+
+create table if not exists portal_heartbeat (
+  id text primary key,
+  note text,
+  updated_at timestamptz default now()
+);
+
+alter table teachers enable row level security;
+alter table students enable row level security;
+alter table workplace_requests enable row level security;
+alter table student_applications enable row level security;
+alter table portal_heartbeat enable row level security;
+
+-- Aynı policy daha önce varsa önce silinir, sonra yeniden oluşturulur.
+drop policy if exists "public teachers" on teachers;
+drop policy if exists "public students" on students;
+drop policy if exists "public workplace" on workplace_requests;
+drop policy if exists "public applications" on student_applications;
+drop policy if exists "public heartbeat" on portal_heartbeat;
+
+create policy "public teachers" on teachers for all to anon using (true) with check (true);
+create policy "public students" on students for all to anon using (true) with check (true);
+create policy "public workplace" on workplace_requests for all to anon using (true) with check (true);
+create policy "public applications" on student_applications for all to anon using (true) with check (true);
+create policy "public heartbeat" on portal_heartbeat for all to anon using (true) with check (true);
+
+insert into teachers(id,name,password,role)
+values ('admin','Yönetici','18309','admin')
+on conflict (id) do update set name=excluded.name, password=excluded.password, role=excluded.role;`;
 init();
 </script>
 </body>
