@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V10.4 İşletme Sayfası ve WhatsApp</title>
+<title>İşyeri Talep ve Öğrenci Yönlendirme Portalı | V10.6 Bulut Kayıt ve Buton Düzeltildi</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -59,7 +59,7 @@
 </style>
 </head>
 <body>
-<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v10.5</small></h1><p>İşyeri talepleri, öğrenci havuzu, ayrı işletme formu, durum takibi ve WhatsApp paylaşım sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
+<header><div class="topbar"><div><h1>İşyeri Talep ve 11. Sınıf Öğrenci Yönlendirme Portalı <small>v10.6</small></h1><p>İşyeri talepleri, öğrenci havuzu, ayrı işletme formu, durum takibi ve WhatsApp paylaşım sistemi</p></div><div class="noPrint"><span id="cloudState"><span class="statusDot"></span>Bulut pasif</span> <span id="userBadge"></span></div></div></header>
 
 
 <div id="teacherGuideOverlay" class="guideOverlay noPrint" onclick="guideBackdropClose(event)">
@@ -356,8 +356,7 @@ function teacherKey(t){return normText(t?.name).replace(/ı/g,'i')}
 function mergeTeacher(old,t){return {...old,...t,id:old?.id||t.id||uid(),name:(t.name||old?.name||'').trim(),pass:t.pass||old?.pass||'1234',role:t.role||old?.role||'teacher',teacher_key:teacherKey(t.name?t:old)}}
 function dedupeTeachers(list){let map=new Map();(list||[]).filter(t=>t&&t.name).forEach(t=>{let isAdmin=t.role==='admin'||['yönetici','yonetici'].includes(normText(t.name));let k=isAdmin?'admin':teacherKey(t);let clean={...t,id:t.id||uid(),role:isAdmin?'admin':(t.role||'teacher'),pass:t.pass||t.password||'1234',teacher_key:k};if(map.has(k))map.set(k,mergeTeacher(map.get(k),clean));else map.set(k,clean);});if(!map.has('admin'))map.set('admin',{id:'admin',name:'Yönetici',pass:'18309',role:'admin',teacher_key:'admin'});return [...map.values()]}
 async function findStudentInCloud(s){if(!DB)return null;let k=studentKey(s);try{let q=await DB.from('students').select('*').eq('student_key',k).limit(1);if(!q.error&&q.data&&q.data[0]){let x=q.data[0];return {id:x.id,no:x.student_no||'',key:x.student_key||'',name:x.name,class:x.class_name||'',phone:x.phone||'',address:x.address||'',features:arr(x.features),note:x.note||''};}}catch(e){}return null}
-async function upsertStudent(obj){obj.key=studentKey(obj);let cloudOld=await findStudentInCloud(obj);if(cloudOld)obj=mergeStudent(cloudOld,obj);let idx=data.students.findIndex(x=>studentKey(x)===obj.key || x.id===obj.id);if(idx>=0){obj=mergeStudent(data.students[idx],obj);data.students[idx]=obj}else data.students.push(obj);data.students=dedupeStudents(data.students);saveLocal();let row={id:obj.id,student_no:obj.no||'',student_key:obj.key,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note};let r=await cloudUpsert('students',row,{onConflict:'student_key'});if(!r.ok)alert('Öğrenci buluta kaydedilemedi: '+r.error+'
-Kayıt yerelde taslak olarak tutuldu.')}
+async function upsertStudent(obj){obj.key=studentKey(obj);let cloudOld=await findStudentInCloud(obj);if(cloudOld)obj=mergeStudent(cloudOld,obj);let idx=data.students.findIndex(x=>studentKey(x)===obj.key || x.id===obj.id);if(idx>=0){obj=mergeStudent(data.students[idx],obj);data.students[idx]=obj}else data.students.push(obj);data.students=dedupeStudents(data.students);saveLocal();let row={id:obj.id,student_no:obj.no||'',student_key:obj.key,name:obj.name,class_name:obj.class,phone:obj.phone,address:obj.address,features:obj.features,note:obj.note};let r=await cloudUpsert('students',row,{onConflict:'student_key'});if(!r.ok)alert('Öğrenci buluta kaydedilemedi: '+r.error+'\nKayıt yerelde taslak olarak tutuldu.')}
 
 function cloudStatusText(ok,msg){
   const el=document.getElementById('cloudStatus');
